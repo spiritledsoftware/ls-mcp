@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- e78cbd5: Add generated MCP output schemas for LSP tools so clients can inspect and filter structured responses.
+
 ## 0.1.3
 
 ### Patch Changes
