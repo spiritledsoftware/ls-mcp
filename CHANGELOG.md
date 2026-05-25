@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3
+
+### Patch Changes
+
+- 9b445dc: Improve README onboarding with a polished header, package badges, npm-based MCP configuration, and Caplets guidance for agent workflows.
+- 693ccc5: Improve MCP tool ergonomics with `lsp_list_servers`, partial standard-tool acquisition results, `strict` mode, and safer `workspace_symbols` server targeting.
+
 ## 0.1.2
 
 ### Patch Changes
