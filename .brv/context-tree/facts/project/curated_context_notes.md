@@ -1,24 +1,20 @@
 ---
 title: Curated Context Notes
-summary: Operational notes on the curated-context workflow and verification requirements.
+summary: Project curation notes capturing docs/plans active curation, durable knowledge retention, context-tree updates, and recon/extraction/curate workflow.
 tags: []
 related: [facts/project/curated_context_notes.md, facts/project/context.md]
 keywords: []
-createdAt: "2026-05-24T09:52:30.266Z"
-updatedAt: "2026-05-24T10:28:11.887Z"
+createdAt: '2026-05-24T09:52:30.266Z'
+updatedAt: '2026-05-25T10:07:31.330Z'
 ---
-
 ## Reason
-
-Preserve key curated-context operational notes from RLM input
+Preserve project curation workflow and docs/plans context as durable knowledge
 
 ## Raw Concept
-
 **Task:**
-Curate operational notes for RLM-based context processing
+Document project curation workflow and knowledge preservation for docs/plans context
 
 **Changes:**
-
 - Extracted key statements from inline context
 - Organized content into facts/project
 - Confirmed the recon result recommends single-pass processing
@@ -32,31 +28,32 @@ Curate operational notes for RLM-based context processing
 - Preserved the recommended RLM workflow sequence
 - Recorded single-pass workflow guidance
 - Recorded extraction and verification constraints
+- Recorded that docs/plans is an actively curated module
+- Captured the practice of preserving findings as durable knowledge
+- Captured the recon -> extraction -> curate apply workflow
 
 **Flow:**
-context variable -> extract facts -> dedup/group -> curate -> verify applied file paths
+context discovered -> facts extracted -> knowledge curated -> durable record stored
 
-**Timestamp:** 2026-05-24T10:28:04.051Z
+**Timestamp:** 2026-05-25T10:07:24.689Z
 
 **Author:** ByteRover context engineer
 
 ## Narrative
-
 ### Structure
-
-This note captures the curation workflow requirements for RLM processing, including direct extraction after precomputed recon and path-based verification.
+Notes describe how working module findings are preserved and curated into the context tree.
 
 ### Dependencies
-
-Depends on precomputed recon metadata and the curation tool result object for verification.
+Uses the context tree as the durable store for extracted project knowledge.
 
 ### Highlights
-
-Single-pass mode was suggested; mapExtract is only needed for chunked contexts, and verification should use applied file paths.
+The docs/plans module is actively curated, and the established workflow is recon -> extraction -> curate apply.
 
 ## Facts
-
-- **curated_context_note_1**: Curate only information with lasting value: facts, decisions, technical details, preferences, or notable outcomes. [project]
+- **docs_plans_module**: The project has a docs/plans module that is actively curated. [project]
+- **knowledge_retention_policy**: This session preserved working module findings as durable knowledge instead of chat-only context. [project]
+- **context_tree_curation**: This session curated working module knowledge into the context tree. [project]
+- **curation_workflow**: The workflow used for docs/plans was recon -> extraction -> curate apply. [convention]
 
 ---
 
