@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+### Patch Changes
+
+- 17dbb27: Snake case naming for tools
+
 ## 0.1.1
 
 ### Patch Changes
