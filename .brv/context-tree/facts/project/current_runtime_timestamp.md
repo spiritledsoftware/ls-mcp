@@ -1,33 +1,35 @@
 ---
 title: Current Runtime Timestamp
-summary: Current runtime timestamp captured for this session.
+summary: Runtime timestamp and curation metadata facts from the current session
 tags: []
 related: []
 keywords: []
 createdAt: '2026-05-25T09:22:00.290Z'
-updatedAt: '2026-05-25T09:22:00.290Z'
+updatedAt: '2026-05-25T09:36:47.467Z'
 ---
 ## Reason
-Capture the provided current date and time as durable context
+Capture runtime and curation metadata from the current task
 
 ## Raw Concept
 **Task:**
-Record the current date and time supplied in the curation request
+Capture current runtime and curation metadata facts
 
 **Changes:**
 - Captured the provided timestamp as a durable fact
+- Recorded current runtime timestamp
+- Recorded curation recon metadata
 
 **Flow:**
-receive timestamp -> preserve as fact -> curate into facts/project
+task input -> extract timestamp and metadata -> curate facts
 
-**Timestamp:** 2026-05-25T09:21:54.585Z
+**Timestamp:** 2026-05-25T09:36:36.764Z
 
 ## Narrative
 ### Structure
-A single timestamp fact stored under facts/project for later recall.
+Standalone project facts capturing the current runtime timestamp and curate recon metadata.
+
+### Dependencies
+Depends on the current task metadata provided to the curator.
 
 ### Highlights
-As of 2026-05-25T09:21:54.585Z, the provided current time is preserved verbatim.
-
-## Facts
-- **current_datetime**: The current date and time is 2026-05-25T09:21:54.585Z. [environment]
+As of 2026-05-25T09:36:36.764Z, the runtime timestamp and curation metadata were captured.

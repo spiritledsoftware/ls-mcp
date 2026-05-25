@@ -1,6 +1,6 @@
-# lsp-mcp
+# ls-mcp
 
-`lsp-mcp` is a Model Context Protocol (MCP) server that exposes Language Server Protocol (LSP) features to MCP hosts. It runs as a stdio MCP server, starts local stdio LSP processes on demand, and translates MCP tool calls into LSP requests, notifications, diagnostics, edits, and server lifecycle operations.
+`ls-mcp` is a Model Context Protocol (MCP) server that exposes Language Server Protocol (LSP) features to MCP hosts. It runs as a stdio MCP server, starts local stdio LSP processes on demand, and translates MCP tool calls into LSP requests, notifications, diagnostics, edits, and server lifecycle operations.
 
 The project is written for Node.js 22+ and TypeScript.
 
