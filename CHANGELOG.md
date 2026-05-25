@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+### Patch Changes
+
+- 2e43f09: Add Changesets release automation and GitHub Actions CI/CD workflows.
+
 ## 0.1.0
 
 Initial implementation of `lsp-mcp`.
