@@ -1,6 +1,6 @@
 {
   "name": "@spiritledsoftware/ls-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server exposing Language Server Protocol capabilities over stdio.",
   "keywords": [
     "language-server",
