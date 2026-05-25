@@ -205,7 +205,7 @@ export function createToolRegistry(options: ToolRegistryOptions = {}): ToolRegis
           editHandler(name as keyof typeof editToolDescriptors, input, context),
       })),
       ...standardMethodRegistry.map((entry) => ({
-        name: entry.toolName,
+        name: toSnakeCase(entry.toolName),
         title: entry.toolName,
         description: entry.description,
         inputSchema: inputSchemas[entry.inputKind],
@@ -214,4 +214,8 @@ export function createToolRegistry(options: ToolRegistryOptions = {}): ToolRegis
       })),
     ],
   };
+}
+
+function toSnakeCase(value: string): string {
+  return value.replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
 }

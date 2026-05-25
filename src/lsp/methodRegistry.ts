@@ -43,7 +43,7 @@ export const standardMethodRegistry = [
     "completionProvider",
   ),
   entry(
-    "completionResolve",
+    "completion_resolve",
     "completionItem/resolve",
     "resolve",
     "Resolves a completion item.",
@@ -53,7 +53,7 @@ export const standardMethodRegistry = [
     false,
   ),
   entry(
-    "signatureHelp",
+    "signature_help",
     "textDocument/signatureHelp",
     "read",
     "Returns signature help at a document position.",
@@ -80,7 +80,7 @@ export const standardMethodRegistry = [
     "definitionProvider",
   ),
   entry(
-    "typeDefinition",
+    "type_definition",
     "textDocument/typeDefinition",
     "read",
     "Returns type definition locations.",
@@ -107,7 +107,7 @@ export const standardMethodRegistry = [
     "referencesProvider",
   ),
   entry(
-    "documentHighlight",
+    "document_highlight",
     "textDocument/documentHighlight",
     "read",
     "Returns document highlights.",
@@ -116,7 +116,7 @@ export const standardMethodRegistry = [
     "documentHighlightProvider",
   ),
   entry(
-    "documentSymbols",
+    "document_symbols",
     "textDocument/documentSymbol",
     "query",
     "Returns symbols in a document.",
@@ -125,7 +125,7 @@ export const standardMethodRegistry = [
     "documentSymbolProvider",
   ),
   entry(
-    "workspaceSymbols",
+    "workspace_symbols",
     "workspace/symbol",
     "query",
     "Returns workspace symbols matching a query.",
@@ -134,7 +134,7 @@ export const standardMethodRegistry = [
     "workspaceSymbolProvider",
   ),
   entry(
-    "workspaceSymbolResolve",
+    "workspace_symbol_resolve",
     "workspaceSymbol/resolve",
     "resolve",
     "Resolves a workspace symbol.",
@@ -144,7 +144,7 @@ export const standardMethodRegistry = [
     false,
   ),
   entry(
-    "codeLens",
+    "code_lens",
     "textDocument/codeLens",
     "query",
     "Returns code lenses for a document.",
@@ -153,7 +153,7 @@ export const standardMethodRegistry = [
     "codeLensProvider",
   ),
   entry(
-    "codeLensResolve",
+    "code_lens_resolve",
     "codeLens/resolve",
     "resolve",
     "Resolves a code lens.",
@@ -163,7 +163,7 @@ export const standardMethodRegistry = [
     false,
   ),
   entry(
-    "documentLinks",
+    "document_links",
     "textDocument/documentLink",
     "query",
     "Returns document links.",
@@ -172,7 +172,7 @@ export const standardMethodRegistry = [
     "documentLinkProvider",
   ),
   entry(
-    "documentLinkResolve",
+    "document_link_resolve",
     "documentLink/resolve",
     "resolve",
     "Resolves a document link.",
@@ -182,7 +182,7 @@ export const standardMethodRegistry = [
     false,
   ),
   entry(
-    "documentColors",
+    "document_colors",
     "textDocument/documentColor",
     "query",
     "Returns document colors.",
@@ -191,7 +191,7 @@ export const standardMethodRegistry = [
     "colorProvider",
   ),
   entry(
-    "colorPresentation",
+    "color_presentation",
     "textDocument/colorPresentation",
     "query",
     "Returns color presentations for a range.",
@@ -200,7 +200,7 @@ export const standardMethodRegistry = [
     "colorProvider",
   ),
   entry(
-    "foldingRanges",
+    "folding_ranges",
     "textDocument/foldingRange",
     "query",
     "Returns folding ranges.",
@@ -209,7 +209,7 @@ export const standardMethodRegistry = [
     "foldingRangeProvider",
   ),
   entry(
-    "selectionRanges",
+    "selection_ranges",
     "textDocument/selectionRange",
     "query",
     "Returns selection ranges.",
@@ -218,7 +218,7 @@ export const standardMethodRegistry = [
     "selectionRangeProvider",
   ),
   entry(
-    "semanticTokensFull",
+    "semantic_tokens_full",
     "textDocument/semanticTokens/full",
     "query",
     "Returns full semantic tokens.",
@@ -227,7 +227,7 @@ export const standardMethodRegistry = [
     "semanticTokensProvider.full",
   ),
   entry(
-    "semanticTokensFullDelta",
+    "semantic_tokens_full_delta",
     "textDocument/semanticTokens/full/delta",
     "query",
     "Returns semantic token edits since a previous full result.",
@@ -236,7 +236,7 @@ export const standardMethodRegistry = [
     "semanticTokensProvider.full.delta",
   ),
   entry(
-    "semanticTokensRange",
+    "semantic_tokens_range",
     "textDocument/semanticTokens/range",
     "query",
     "Returns range semantic tokens.",
@@ -245,7 +245,7 @@ export const standardMethodRegistry = [
     "semanticTokensProvider.range",
   ),
   entry(
-    "linkedEditingRange",
+    "linked_editing_range",
     "textDocument/linkedEditingRange",
     "query",
     "Returns linked editing ranges.",
@@ -263,7 +263,7 @@ export const standardMethodRegistry = [
     "monikerProvider",
   ),
   entry(
-    "inlayHints",
+    "inlay_hints",
     "textDocument/inlayHint",
     "query",
     "Returns inlay hints for a range.",
@@ -272,7 +272,7 @@ export const standardMethodRegistry = [
     "inlayHintProvider",
   ),
   entry(
-    "inlayHintResolve",
+    "inlay_hint_resolve",
     "inlayHint/resolve",
     "resolve",
     "Resolves an inlay hint.",
@@ -282,7 +282,7 @@ export const standardMethodRegistry = [
     false,
   ),
   entry(
-    "inlineValues",
+    "inline_values",
     "textDocument/inlineValue",
     "query",
     "Returns inline values for a range.",
@@ -291,7 +291,7 @@ export const standardMethodRegistry = [
     "inlineValueProvider",
   ),
   entry(
-    "callHierarchyPrepare",
+    "call_hierarchy_prepare",
     "textDocument/prepareCallHierarchy",
     "query",
     "Prepares call hierarchy items.",
@@ -300,7 +300,7 @@ export const standardMethodRegistry = [
     "callHierarchyProvider",
   ),
   entry(
-    "callHierarchyIncoming",
+    "call_hierarchy_incoming",
     "callHierarchy/incomingCalls",
     "query",
     "Returns incoming call hierarchy calls.",
@@ -310,7 +310,7 @@ export const standardMethodRegistry = [
     false,
   ),
   entry(
-    "callHierarchyOutgoing",
+    "call_hierarchy_outgoing",
     "callHierarchy/outgoingCalls",
     "query",
     "Returns outgoing call hierarchy calls.",
@@ -320,7 +320,7 @@ export const standardMethodRegistry = [
     false,
   ),
   entry(
-    "typeHierarchyPrepare",
+    "type_hierarchy_prepare",
     "textDocument/prepareTypeHierarchy",
     "query",
     "Prepares type hierarchy items.",
@@ -329,7 +329,7 @@ export const standardMethodRegistry = [
     "typeHierarchyProvider",
   ),
   entry(
-    "typeHierarchySupertypes",
+    "type_hierarchy_supertypes",
     "typeHierarchy/supertypes",
     "query",
     "Returns type hierarchy supertypes.",
@@ -339,7 +339,7 @@ export const standardMethodRegistry = [
     false,
   ),
   entry(
-    "typeHierarchySubtypes",
+    "type_hierarchy_subtypes",
     "typeHierarchy/subtypes",
     "query",
     "Returns type hierarchy subtypes.",

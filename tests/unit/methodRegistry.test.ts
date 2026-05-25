@@ -6,7 +6,7 @@ describe("standardMethodRegistry", () => {
   it("defines typed read/query tools with capability metadata", () => {
     const hover = getMethodRegistryEntry("hover");
     const definition = getMethodRegistryEntry("definition");
-    const workspaceSymbols = getMethodRegistryEntry("workspaceSymbols");
+    const workspaceSymbols = getMethodRegistryEntry("workspace_symbols");
 
     expect(hover).toMatchObject({
       toolName: "hover",
@@ -37,39 +37,39 @@ describe("standardMethodRegistry", () => {
       expect.arrayContaining([
         "hover",
         "completion",
-        "completionResolve",
-        "signatureHelp",
+        "completion_resolve",
+        "signature_help",
         "declaration",
         "definition",
-        "typeDefinition",
+        "type_definition",
         "implementation",
         "references",
-        "documentHighlight",
-        "documentSymbols",
-        "workspaceSymbols",
-        "workspaceSymbolResolve",
-        "codeLens",
-        "codeLensResolve",
-        "documentLinks",
-        "documentLinkResolve",
-        "documentColors",
-        "colorPresentation",
-        "foldingRanges",
-        "selectionRanges",
-        "semanticTokensFull",
-        "semanticTokensFullDelta",
-        "semanticTokensRange",
-        "linkedEditingRange",
+        "document_highlight",
+        "document_symbols",
+        "workspace_symbols",
+        "workspace_symbol_resolve",
+        "code_lens",
+        "code_lens_resolve",
+        "document_links",
+        "document_link_resolve",
+        "document_colors",
+        "color_presentation",
+        "folding_ranges",
+        "selection_ranges",
+        "semantic_tokens_full",
+        "semantic_tokens_full_delta",
+        "semantic_tokens_range",
+        "linked_editing_range",
         "monikers",
-        "inlayHints",
-        "inlayHintResolve",
-        "inlineValues",
-        "callHierarchyPrepare",
-        "callHierarchyIncoming",
-        "callHierarchyOutgoing",
-        "typeHierarchyPrepare",
-        "typeHierarchySupertypes",
-        "typeHierarchySubtypes",
+        "inlay_hints",
+        "inlay_hint_resolve",
+        "inline_values",
+        "call_hierarchy_prepare",
+        "call_hierarchy_incoming",
+        "call_hierarchy_outgoing",
+        "type_hierarchy_prepare",
+        "type_hierarchy_supertypes",
+        "type_hierarchy_subtypes",
       ]),
     );
     expect(toolNames).not.toEqual(
@@ -79,23 +79,23 @@ describe("standardMethodRegistry", () => {
 
   it("marks resolve and hierarchy item methods as server-specific", () => {
     for (const toolName of [
-      "completionResolve",
-      "workspaceSymbolResolve",
-      "codeLensResolve",
-      "documentLinkResolve",
-      "inlayHintResolve",
-      "callHierarchyIncoming",
-      "callHierarchyOutgoing",
-      "typeHierarchySupertypes",
-      "typeHierarchySubtypes",
+      "completion_resolve",
+      "workspace_symbol_resolve",
+      "code_lens_resolve",
+      "document_link_resolve",
+      "inlay_hint_resolve",
+      "call_hierarchy_incoming",
+      "call_hierarchy_outgoing",
+      "type_hierarchy_supertypes",
+      "type_hierarchy_subtypes",
     ]) {
       expect(getMethodRegistryEntry(toolName).supportsMultiServer).toBe(false);
     }
-    expect(getMethodRegistryEntry("callHierarchyPrepare").supportsMultiServer).toBe(true);
+    expect(getMethodRegistryEntry("call_hierarchy_prepare").supportsMultiServer).toBe(true);
   });
 
   it("defines semantic tokens full delta with previous result ID input", () => {
-    expect(getMethodRegistryEntry("semanticTokensFullDelta")).toMatchObject({
+    expect(getMethodRegistryEntry("semantic_tokens_full_delta")).toMatchObject({
       lspMethod: "textDocument/semanticTokens/full/delta",
       inputKind: "semanticTokensFullDelta",
       needsDocument: true,

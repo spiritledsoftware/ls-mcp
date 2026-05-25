@@ -27,46 +27,46 @@ Standard tools map directly to LSP methods and validate input with typed schemas
 Read-oriented tools:
 
 - `hover`
-- `signatureHelp`
+- `signature_help`
 - `declaration`
 - `definition`
-- `typeDefinition`
+- `type_definition`
 - `implementation`
 - `references`
-- `documentHighlight`
+- `document_highlight`
 
 Query-oriented tools:
 
 - `completion`
-- `documentSymbols`
-- `workspaceSymbols`
-- `codeLens`
-- `documentLinks`
-- `documentColors`
-- `colorPresentation`
-- `foldingRanges`
-- `selectionRanges`
-- `semanticTokensFull`
-- `semanticTokensFullDelta`
-- `semanticTokensRange`
-- `linkedEditingRange`
+- `document_symbols`
+- `workspace_symbols`
+- `code_lens`
+- `document_links`
+- `document_colors`
+- `color_presentation`
+- `folding_ranges`
+- `selection_ranges`
+- `semantic_tokens_full`
+- `semantic_tokens_full_delta`
+- `semantic_tokens_range`
+- `linked_editing_range`
 - `monikers`
-- `inlayHints`
-- `inlineValues`
-- `callHierarchyPrepare`
-- `callHierarchyIncoming`
-- `callHierarchyOutgoing`
-- `typeHierarchyPrepare`
-- `typeHierarchySupertypes`
-- `typeHierarchySubtypes`
+- `inlay_hints`
+- `inline_values`
+- `call_hierarchy_prepare`
+- `call_hierarchy_incoming`
+- `call_hierarchy_outgoing`
+- `type_hierarchy_prepare`
+- `type_hierarchy_supertypes`
+- `type_hierarchy_subtypes`
 
 Resolve tools:
 
-- `completionResolve`
-- `workspaceSymbolResolve`
-- `codeLensResolve`
-- `documentLinkResolve`
-- `inlayHintResolve`
+- `completion_resolve`
+- `workspace_symbol_resolve`
+- `code_lens_resolve`
+- `document_link_resolve`
+- `inlay_hint_resolve`
 
 File and position inputs use 1-based `line` and `character` values. They are converted to LSP's 0-based positions before requests are sent.
 
