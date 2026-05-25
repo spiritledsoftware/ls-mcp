@@ -39,7 +39,8 @@
     }
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "clean": "rm -rf dist",
@@ -52,7 +53,7 @@
     "lint:fix": "oxlint . --fix",
     "changeset": "changeset",
     "version": "changeset version",
-    "release": "changeset publish --provenance",
+    "release": "changeset publish",
     "prepare": "husky",
     "start": "node dist/index.js",
     "test": "vitest run",
