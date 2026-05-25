@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createMcpServer, listLspServers } from "../../src/mcp/server.js";
 import type { ToolHandlerContext, ToolRegistry } from "../../src/tools/registerTools.js";
 
-describe("lsp_servers", () => {
+describe("lsp_list_servers", () => {
   it("lists known LSP servers", async () => {
     await expect(listLspServers()).resolves.toMatchObject({
       ok: true,

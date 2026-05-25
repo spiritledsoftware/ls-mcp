@@ -4,14 +4,21 @@ import { getMethodRegistryEntry } from "../lsp/methodRegistry.js";
 import type { MethodRegistryEntry } from "../lsp/methodRegistry.js";
 import { normalizeLspResult } from "../lsp/resultNormalization.js";
 import type { DocumentStore } from "../lsp/documentStore.js";
-import type { AcquiredLspSession, LspSessionManager } from "../lsp/sessionManager.js";
+import type {
+  AcquiredLspSession,
+  LspSessionManager,
+  SettledLspSessionAcquisition,
+} from "../lsp/sessionManager.js";
 import { validateWorkspacePath, type WorkspaceSecurityOptions } from "../security/workspace.js";
 import type { ToolHandlerContext } from "./registerTools.js";
 import { inputSchemas } from "./toolSchemas.js";
 import { structuredToolError, type StructuredToolError } from "./toolErrors.js";
 
 export interface StandardToolHandlerOptions {
-  sessionManager: Pick<LspSessionManager, "getSessionsForFile" | "getSessionsForWorkspace">;
+  sessionManager: Pick<LspSessionManager, "getSessionsForFile" | "getSessionsForWorkspace"> &
+    Partial<
+      Pick<LspSessionManager, "getSessionsForFileSettled" | "getSessionsForWorkspaceSettled">
+    >;
   documentStore: DocumentStore;
   security?: WorkspaceSecurityOptions;
 }
@@ -57,21 +64,21 @@ export function createStandardToolHandler(options: StandardToolHandlerOptions) {
     if (!entry.supportsMultiServer && !optionalString(parsed.serverId)) {
       throw new Error(`Tool ${entry.toolName} requires serverId`);
     }
-    let sessions: AcquiredLspSession[];
+    let acquisition: SessionAcquisitionResult;
     try {
-      sessions = await acquireSessions(options.sessionManager, entry, parsed);
+      acquisition = await acquireSessions(options.sessionManager, entry, parsed);
     } catch (error) {
       return {
         ok: false,
         results: { acquisition: { ok: false, ...structuredToolError(error) } },
       };
     }
-    if (sessions.length === 0) {
+    if (acquisition.sessions.length === 0 && acquisition.failures.length === 0) {
       return { ok: false, results: {}, error: `No matching LSP servers for ${entry.toolName}` };
     }
 
     const perServerResults = await Promise.all(
-      sessions.map(async (acquired) => {
+      acquisition.sessions.map(async (acquired) => {
         try {
           if (
             entry.capabilityPath &&
@@ -110,12 +117,16 @@ export function createStandardToolHandler(options: StandardToolHandlerOptions) {
       }),
     );
     const results: StandardToolResult["results"] = {};
+    for (const failure of acquisition.failures) {
+      results[failure.serverId] = { ok: false, error: failure.error };
+    }
     for (const perServerResult of perServerResults) {
       results[perServerResult.serverId] = perServerResult.result;
     }
 
+    const values = Object.values(results);
     return {
-      ok: Object.values(results).every((result) => result.ok),
+      ok: values.some((result) => result.ok),
       results,
     };
   };
@@ -126,25 +137,79 @@ interface PerServerResult {
   result: StandardToolServerSuccess | StandardToolServerFailure;
 }
 
+interface SessionAcquisitionResult {
+  sessions: AcquiredLspSession[];
+  failures: Array<{ serverId: string; error: string }>;
+}
+
 async function acquireSessions(
-  sessionManager: Pick<LspSessionManager, "getSessionsForFile" | "getSessionsForWorkspace">,
+  sessionManager: StandardToolHandlerOptions["sessionManager"],
   entry: MethodRegistryEntry,
   input: Record<string, unknown>,
-): Promise<AcquiredLspSession[]> {
+): Promise<SessionAcquisitionResult> {
   const workspaceRoot = String(input.workspaceRoot);
   const filePath = optionalString(input.filePath);
+  const languageId = optionalString(input.languageId);
+  const serverId = optionalString(input.serverId);
+  const strict = input.strict === true || !entry.supportsMultiServer || Boolean(serverId);
   if (!filePath && !entry.needsDocument) {
-    return sessionManager.getSessionsForWorkspace({
-      workspaceRoot,
-      serverId: optionalString(input.serverId),
-    });
+    if (languageId) {
+      return acquireForFile(sessionManager, entry, input, workspaceRoot, workspaceRoot, strict);
+    }
+    if (strict) {
+      return {
+        sessions: await sessionManager.getSessionsForWorkspace({ workspaceRoot, serverId }),
+        failures: [],
+      };
+    }
+    if (sessionManager.getSessionsForWorkspaceSettled) {
+      return settledResult(
+        await sessionManager.getSessionsForWorkspaceSettled({ workspaceRoot, serverId }),
+      );
+    }
+    return {
+      sessions: await sessionManager.getSessionsForWorkspace({ workspaceRoot, serverId }),
+      failures: [],
+    };
   }
-  return sessionManager.getSessionsForFile({
+  return acquireForFile(
+    sessionManager,
+    entry,
+    input,
     workspaceRoot,
-    filePath: filePath ?? workspaceRoot,
+    filePath ?? workspaceRoot,
+    strict,
+  );
+}
+
+async function acquireForFile(
+  sessionManager: StandardToolHandlerOptions["sessionManager"],
+  _entry: MethodRegistryEntry,
+  input: Record<string, unknown>,
+  workspaceRoot: string,
+  filePath: string,
+  strict: boolean,
+): Promise<SessionAcquisitionResult> {
+  const options = {
+    workspaceRoot,
+    filePath,
     languageId: optionalString(input.languageId),
     serverId: optionalString(input.serverId),
-  });
+  };
+  if (strict) {
+    return { sessions: await sessionManager.getSessionsForFile(options), failures: [] };
+  }
+  if (sessionManager.getSessionsForFileSettled) {
+    return settledResult(await sessionManager.getSessionsForFileSettled(options));
+  }
+  return { sessions: await sessionManager.getSessionsForFile(options), failures: [] };
+}
+
+function settledResult(settled: SettledLspSessionAcquisition[]): SessionAcquisitionResult {
+  return {
+    sessions: settled.filter((result) => result.ok).map((result) => result.value),
+    failures: settled.filter((result) => !result.ok).map((result) => result.value),
+  };
 }
 
 function buildRequestParams(entry: MethodRegistryEntry, input: Record<string, unknown>): unknown {

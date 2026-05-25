@@ -95,7 +95,7 @@ describe("server lifecycle tools", () => {
       }),
     });
 
-    const result = await callTool(registry, "lsp_servers", {});
+    const result = await callTool(registry, "lsp_list_servers", {});
 
     expect(factory).not.toHaveBeenCalled();
     expect(result).toMatchObject({ ok: true });

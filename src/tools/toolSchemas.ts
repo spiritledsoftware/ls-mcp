@@ -5,6 +5,7 @@ export const positionInputSchema = z.object({
   filePath: z.string(),
   languageId: z.string().optional(),
   serverId: z.string().optional(),
+  strict: z.boolean().optional(),
   line: z.number().int().positive(),
   character: z.number().int().positive(),
 });
@@ -14,6 +15,7 @@ export const fileInputSchema = z.object({
   filePath: z.string(),
   languageId: z.string().optional(),
   serverId: z.string().optional(),
+  strict: z.boolean().optional(),
 });
 
 export const mcpRangeSchema = z
@@ -75,6 +77,7 @@ export const workspaceSymbolInputSchema = z.object({
   filePath: z.string().optional(),
   languageId: z.string().optional(),
   serverId: z.string().optional(),
+  strict: z.boolean().optional(),
   query: z.string(),
 });
 
@@ -83,6 +86,7 @@ export const itemInputSchema = z.object({
   filePath: z.string().optional(),
   languageId: z.string().optional(),
   serverId: z.string().optional(),
+  strict: z.boolean().optional(),
   item: z.unknown(),
 });
 

@@ -38,7 +38,8 @@ describe("tool registration", () => {
 
     const names = registry.tools.map((tool) => tool.name);
 
-    expect(names).toContain("lsp_servers");
+    expect(names).toContain("lsp_list_servers");
+    expect(names).not.toContain("lsp_servers");
     expect(names).toContain("lsp_server_status");
     expect(names).toContain("lsp_stop_server");
     expect(names).toContain("lsp_stop_workspace");
@@ -67,7 +68,7 @@ describe("tool registration", () => {
       expect(tool.handler).toEqual(expect.any(Function));
     }
 
-    expect(tools.get("lsp_servers")!.inputSchema!.safeParse({}).success).toBe(true);
+    expect(tools.get("lsp_list_servers")!.inputSchema!.safeParse({}).success).toBe(true);
     expect(
       tools.get("hover")!.inputSchema!.safeParse({
         workspaceRoot: "/repo",

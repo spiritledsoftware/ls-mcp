@@ -94,7 +94,7 @@
 
 ### Task 1: Project Skeleton
 
-Create package/build/test/lint scaffolding and a minimal stdio MCP server with an `lsp_servers` placeholder tool. Verify `npm run typecheck` and `npm test`.
+Create package/build/test/lint scaffolding and a minimal stdio MCP server with an `lsp_list_servers` placeholder tool. Verify `npm run typecheck` and `npm test`.
 
 ### Task 2: Config Paths, JSONC Parsing, and Merge
 
@@ -154,7 +154,7 @@ Add per-server request queue, max concurrency, default/workspace request timeout
 
 ### Task 16: Server Status and Lifecycle Tools
 
-Implement `lsp_servers`, `lsp_server_status`, `lsp_stop_server`, and `lsp_stop_workspace` with install status, running status, capabilities, health, and idle information.
+Implement `lsp_list_servers`, `lsp_server_status`, `lsp_stop_server`, and `lsp_stop_workspace` with install status, running status, capabilities, health, and idle information.
 
 ### Task 17: End-to-End Smoke Tests
 

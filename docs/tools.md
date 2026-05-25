@@ -10,6 +10,7 @@ When `serverId` is omitted:
 
 - File-targeted tools run against every configured or built-in server whose `extensions` or `languageIds` match the file.
 - Workspace-targeted raw tools run against all configured and built-in servers, deduplicated by registry entry.
+- Standard typed tools use settled acquisition by default, so one matching server failing to start is returned as a per-server error while other matching servers can still succeed.
 - Results are returned per server ID.
 
 When `serverId` is provided:
@@ -20,9 +21,13 @@ When `serverId` is provided:
 
 For edit-producing tools, `apply: true` requires `serverId` if more than one server matches. This prevents applying edits from multiple servers by accident.
 
+Standard typed tools also accept `strict: true`. In strict mode, any matching server acquisition failure fails the whole acquisition step. Omit `strict` for agent-friendly partial results.
+
 ## Standard Typed Tools
 
 Standard tools map directly to LSP methods and validate input with typed schemas. They only run on servers that advertise the required capability.
+
+`workspace_symbols` accepts optional `filePath` and `languageId`. When either is provided, server selection is file/language-based instead of workspace-wide, which avoids starting unrelated language servers in polyglot workspaces.
 
 Read-oriented tools:
 
@@ -170,7 +175,7 @@ Raw tool notes:
 
 ## Server Status And Lifecycle
 
-`lsp_servers` lists configured and built-in servers without starting them. It includes server metadata and install status.
+`lsp_list_servers` lists configured and built-in servers without starting them. It includes server metadata and install status.
 
 `lsp_server_status` reports matching server definitions and active sessions for a workspace. It accepts:
 

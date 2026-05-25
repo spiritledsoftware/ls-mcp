@@ -28,7 +28,7 @@ export { lspServersSchema, type LspServers } from "./serverTools.js";
 export async function listLspServers(): Promise<LspServers> {
   const registry = createToolRegistry();
   return (await registry.tools
-    .find((tool) => tool.name === "lsp_servers")!
+    .find((tool) => tool.name === "lsp_list_servers")!
     .handler({})) as LspServers;
 }
 
@@ -153,7 +153,7 @@ export function createToolRegistry(options: ToolRegistryOptions = {}): ToolRegis
     shutdown: () => sessionManager.shutdownAll(),
     tools: [
       {
-        name: "lsp_servers",
+        name: "lsp_list_servers",
         title: "List LSP servers",
         description: "Lists configured and built-in LSP servers without starting them.",
         inputSchema: lspServersInputSchema,
