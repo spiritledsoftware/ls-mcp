@@ -1,0 +1,76 @@
+{
+  "name": "@spiritledsoftware/lsp-mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing Language Server Protocol capabilities over stdio.",
+  "keywords": [
+    "language-server",
+    "language-server-protocol",
+    "lsp",
+    "mcp",
+    "model-context-protocol"
+  ],
+  "homepage": "https://github.com/spiritledsoftware/lsp-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/spiritledsoftware/lsp-mcp/issues"
+  },
+  "license": "MIT",
+  "author": "Ian Pascoe",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spiritledsoftware/lsp-mcp.git"
+  },
+  "bin": {
+    "lsp-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "docs/architecture.md",
+    "docs/config.md",
+    "docs/tools.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "rm -rf dist && tsgo -p tsconfig.build.json && rolldown -c && chmod +x dist/index.js",
+    "build:watch": "rm -rf dist && rolldown -c --watch",
+    "dev": "tsx src/index.ts",
+    "format": "oxfmt .",
+    "format:check": "oxfmt . --check",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "typecheck": "tsgo -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "jsonc-parser": "^3.3.1",
+    "vscode-jsonrpc": "^8.2.1",
+    "vscode-languageserver-protocol": "^3.17.5",
+    "vscode-uri": "^3.1.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@typescript/native-preview": "7.0.0-dev.20260524.1",
+    "oxfmt": "^0.51.0",
+    "oxlint": "^1.66.0",
+    "rolldown": "^1.0.2",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.2.2"
+}

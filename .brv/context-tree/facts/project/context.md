@@ -1,0 +1,11 @@
+# Topic: project
+
+## Overview
+
+Curation workflow notes for RLM-based context processing and verification.
+
+## Key Concepts
+
+- single-pass recon
+- taskId handling
+- verification via applied file paths
