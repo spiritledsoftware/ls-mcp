@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -8,7 +8,10 @@ const outputDir = resolve(root, "src/tools/generated");
 
 const tasks = [
   {
-    input: "node_modules/vscode-languageserver-types/lib/esm/main.d.ts",
+    input: await firstExistingPath([
+      "node_modules/vscode-languageserver-types/lib/esm/main.d.ts",
+      "node_modules/vscode-languageserver-types/lib/umd/main.d.ts",
+    ]),
     output: "src/tools/generated/lspTypes.ts",
     header:
       "// Generated from vscode-languageserver-types by scripts/generate-lsp-output-schemas.mjs. Do not edit by hand.",
@@ -27,6 +30,18 @@ const tasks = [
       "// Generated from vscode-languageserver-protocol protocol.moniker by scripts/generate-lsp-output-schemas.mjs. Do not edit by hand.",
   },
 ];
+
+async function firstExistingPath(paths) {
+  for (const path of paths) {
+    try {
+      await access(resolve(root, path));
+      return path;
+    } catch {
+      // Try the next published layout.
+    }
+  }
+  throw new Error(`None of these schema source files exist: ${paths.join(", ")}`);
+}
 
 await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
