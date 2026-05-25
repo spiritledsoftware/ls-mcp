@@ -18,13 +18,24 @@ describe("lsp_list_servers", () => {
 describe("createMcpServer", () => {
   it("registers provided tools through the MCP SDK path", async () => {
     const handle = createMcpServer(
-      testRegistry([{ name: "example", handler: () => ({ ok: true }) }]),
+      testRegistry([
+        {
+          name: "example",
+          outputSchema: z.object({ ok: z.boolean() }),
+          handler: () => ({ ok: true }),
+        },
+      ]),
     );
     const client = await connectClient(handle);
 
     const result = await client.listTools();
 
-    expect(result.tools.map((tool) => tool.name)).toContain("example");
+    const exampleTool = result.tools.find((tool) => tool.name === "example");
+    expect(exampleTool).toBeDefined();
+    expect(exampleTool?.outputSchema).toMatchObject({
+      type: "object",
+      properties: { ok: { type: "boolean" } },
+    });
     await client.close();
     await handle.close();
   });
@@ -108,6 +119,7 @@ describe("createMcpServer", () => {
 
 interface TestTool {
   name: string;
+  outputSchema?: z.ZodType;
   handler(input: unknown, context?: ToolHandlerContext): unknown;
 }
 
@@ -122,6 +134,7 @@ function testRegistry(
       title: tool.name,
       description: `Test tool ${tool.name}`,
       inputSchema: z.object({}),
+      ...(tool.outputSchema ? { outputSchema: tool.outputSchema } : {}),
       handler: tool.handler,
     })),
   };
