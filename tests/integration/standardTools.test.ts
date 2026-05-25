@@ -126,6 +126,103 @@ describe("standard tool forwarding", () => {
     });
   });
 
+  it("returns partial acquisition failures for multi-server tools by default", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const session = createSession(
+      { "textDocument/hover": { contents: "ok" } },
+      { hoverProvider: true },
+    );
+    const handler = createStandardToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => {
+          throw new Error("strict path should not run");
+        }),
+        getSessionsForFileSettled: vi.fn(async () => [
+          { ok: true as const, value: acquired("typescript", session, workspaceRoot) },
+          { ok: false as const, value: { serverId: "go", error: "gopls is not available" } },
+        ]),
+        getSessionsForWorkspace: vi.fn(async () => []),
+        getSessionsForWorkspaceSettled: vi.fn(async () => []),
+      },
+      documentStore: new DocumentStore(),
+    });
+
+    const result = await handler("hover", { workspaceRoot, filePath, line: 1, character: 1 });
+
+    expect(result).toMatchObject({
+      ok: true,
+      results: {
+        typescript: { ok: true, result: { contents: "ok" } },
+        go: { ok: false, error: "gopls is not available" },
+      },
+    });
+  });
+
+  it("uses strict acquisition when strict is true", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const handler = createStandardToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => {
+          throw new Error("gopls is not available");
+        }),
+        getSessionsForFileSettled: vi.fn(async () => []),
+        getSessionsForWorkspace: vi.fn(async () => []),
+        getSessionsForWorkspaceSettled: vi.fn(async () => []),
+      },
+      documentStore: new DocumentStore(),
+    });
+
+    const result = await handler("hover", {
+      workspaceRoot,
+      filePath,
+      line: 1,
+      character: 1,
+      strict: true,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      results: { acquisition: { ok: false, error: "gopls is not available" } },
+    });
+  });
+
+  it("uses file matching for workspace symbols when filePath or languageId is provided", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const session = createSession(
+      { "workspace/symbol": [{ name: "createMcpServer", kind: 12 }] },
+      { workspaceSymbolProvider: true },
+    );
+    const getSessionsForFileSettled = vi.fn(async () => [
+      { ok: true as const, value: acquired("typescript", session, workspaceRoot) },
+    ]);
+    const getSessionsForWorkspaceSettled = vi.fn(async () => []);
+    const handler = createStandardToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => []),
+        getSessionsForFileSettled,
+        getSessionsForWorkspace: vi.fn(async () => []),
+        getSessionsForWorkspaceSettled,
+      },
+      documentStore: new DocumentStore(),
+    });
+
+    const result = await handler("workspace_symbols", {
+      workspaceRoot,
+      filePath,
+      languageId: "typescript",
+      query: "createMcpServer",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(getSessionsForFileSettled).toHaveBeenCalledWith({
+      workspaceRoot,
+      filePath,
+      languageId: "typescript",
+      serverId: undefined,
+    });
+    expect(getSessionsForWorkspaceSettled).not.toHaveBeenCalled();
+  });
+
   it("preserves aggregation key order from acquired sessions", async () => {
     const { workspaceRoot, filePath } = await createWorkspaceFile();
     const slow = createSession(
@@ -398,7 +495,7 @@ describe("standard tool forwarding", () => {
 
     const result = await handler("document_symbols", { workspaceRoot, filePath });
 
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBe(true);
     expect(result.results.good).toMatchObject({
       ok: true,
       result: [
