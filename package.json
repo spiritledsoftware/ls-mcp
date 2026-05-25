@@ -49,6 +49,8 @@
     "dev": "tsx src/index.ts",
     "format": "oxfmt .",
     "format:check": "oxfmt . --check",
+    "generate:lsp-output-schemas": "node scripts/generate-lsp-output-schemas.mjs",
+    "check:lsp-output-schemas": "pnpm run generate:lsp-output-schemas && git diff --exit-code -- src/tools/generated && test -z \"$(git ls-files --others --exclude-standard -- src/tools/generated)\"",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "changeset": "changeset",
@@ -75,6 +77,7 @@
     "oxfmt": "^0.51.0",
     "oxlint": "^1.66.0",
     "rolldown": "^1.0.2",
+    "ts-to-zod": "^5.1.0",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.7"

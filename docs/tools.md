@@ -27,6 +27,8 @@ Standard typed tools also accept `strict: true`. In strict mode, any matching se
 
 Standard tools map directly to LSP methods and validate input with typed schemas. They only run on servers that advertise the required capability.
 
+Standard tools also advertise MCP `outputSchema` metadata for their structured responses. The project-specific wrapper schemas are maintained in source, while LSP payload schemas are generated from the installed `vscode-languageserver-types` and `vscode-languageserver-protocol` declarations. This lets MCP clients inspect or filter structured content without this project hand-maintaining LSP result shapes.
+
 `workspace_symbols` accepts optional `filePath` and `languageId`. When either is provided, server selection is file/language-based instead of workspace-wide, which avoids starting unrelated language servers in polyglot workspaces.
 
 Read-oriented tools:
@@ -202,3 +204,14 @@ Raw tool notes:
 ```
 
 Lifecycle tools operate on local sessions managed by the current MCP server process. They do not uninstall managed downloads or modify configuration.
+
+## Output Schema Generation
+
+Generated LSP payload schemas are checked in under `src/tools/generated/` and must not be edited by hand.
+
+Commands:
+
+- `pnpm run generate:lsp-output-schemas`: regenerates checked-in LSP output schemas from installed LSP library declaration files.
+- `pnpm run check:lsp-output-schemas`: regenerates schemas and fails if `src/tools/generated/` differs from the checked-in version.
+
+CI runs the freshness check after dependency installation. When upgrading LSP libraries or changing the generation script, regenerate the schemas and commit the generated diff with the source changes.

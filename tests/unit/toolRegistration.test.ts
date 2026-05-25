@@ -70,6 +70,69 @@ describe("tool registration", () => {
 
     expect(tools.get("lsp_list_servers")!.inputSchema!.safeParse({}).success).toBe(true);
     expect(
+      tools.get("lsp_list_servers")!.outputSchema!.safeParse({ ok: true, servers: [] }).success,
+    ).toBe(true);
+    expect(
+      tools.get("hover")!.outputSchema!.safeParse({
+        ok: true,
+        results: {
+          typescript: { ok: true, result: { contents: "hover text" } },
+        },
+      }).success,
+    ).toBe(true);
+    expect(
+      tools.get("definition")!.outputSchema!.safeParse({
+        ok: true,
+        results: {
+          typescript: {
+            ok: true,
+            result: [
+              {
+                uri: "file:///repo/a.ts",
+                range: { start: { line: 1, character: 1 }, end: { line: 1, character: 5 } },
+                filePath: "/repo/a.ts",
+                outsideWorkspace: false,
+              },
+            ],
+          },
+        },
+      }).success,
+    ).toBe(true);
+    expect(
+      tools.get("lsp_diagnostics")!.outputSchema!.safeParse({
+        ok: true,
+        results: {
+          typescript: {
+            ok: true,
+            mode: "pull",
+            uri: "file:///repo/a.ts",
+            filePath: "/repo/a.ts",
+            diagnostics: [
+              {
+                range: { start: { line: 1, character: 1 }, end: { line: 1, character: 5 } },
+                message: "Example diagnostic",
+                filePath: "/repo/a.ts",
+              },
+            ],
+          },
+        },
+      }).success,
+    ).toBe(true);
+    expect(
+      tools.get("lsp_rename")!.outputSchema!.safeParse({
+        ok: true,
+        results: {
+          typescript: {
+            ok: true,
+            applied: false,
+            message:
+              "Edits were returned but not applied. Re-run with apply: true to modify files.",
+            edit: { changes: {} },
+          },
+        },
+      }).success,
+    ).toBe(true);
+    expect(
       tools.get("hover")!.inputSchema!.safeParse({
         workspaceRoot: "/repo",
         filePath: "/repo/a.ts",
