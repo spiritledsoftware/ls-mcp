@@ -228,7 +228,7 @@ function inlineValueContext(value: unknown) {
 }
 
 function isWrappedItemMethod(toolName: string): boolean {
-  return toolName.startsWith("callHierarchy") || toolName.startsWith("typeHierarchy");
+  return toolName.startsWith("call_hierarchy") || toolName.startsWith("type_hierarchy");
 }
 
 function position(line: unknown, character: unknown): McpPosition {

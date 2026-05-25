@@ -161,7 +161,7 @@ describe("LspSession", () => {
     );
     expect(initializeEvent.params.capabilities.workspace.configuration).toBeUndefined();
     expect(initializeEvent.params.capabilities.workspace.semanticTokens).toBeUndefined();
-    expect(initializeEvent.params.capabilities.workspace.codeLens).toBeUndefined();
+    expect(initializeEvent.params.capabilities.workspace.code_lens).toBeUndefined();
     expect(initializeEvent.params.capabilities.workspace.applyEdit).toBeUndefined();
     expect(initializeEvent.params.capabilities.workspace.fileOperations).toBeUndefined();
     expect(initializeEvent.params.capabilities.window.workDoneProgress).toBeUndefined();

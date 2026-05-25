@@ -396,7 +396,7 @@ describe("standard tool forwarding", () => {
       documentStore: new DocumentStore(),
     });
 
-    const result = await handler("documentSymbols", { workspaceRoot, filePath });
+    const result = await handler("document_symbols", { workspaceRoot, filePath });
 
     expect(result.ok).toBe(false);
     expect(result.results.good).toMatchObject({
@@ -430,7 +430,7 @@ describe("standard tool forwarding", () => {
       documentStore: new DocumentStore(),
     });
 
-    await handler("colorPresentation", {
+    await handler("color_presentation", {
       workspaceRoot,
       filePath,
       startLine: 1,
@@ -439,7 +439,7 @@ describe("standard tool forwarding", () => {
       endCharacter: 6,
       color: { red: 1, green: 0.5, blue: 0, alpha: 1 },
     });
-    await handler("selectionRanges", {
+    await handler("selection_ranges", {
       workspaceRoot,
       filePath,
       positions: [
@@ -447,7 +447,7 @@ describe("standard tool forwarding", () => {
         { line: 1, character: 7 },
       ],
     });
-    await handler("inlineValues", {
+    await handler("inline_values", {
       workspaceRoot,
       filePath,
       startLine: 1,
@@ -505,7 +505,7 @@ describe("standard tool forwarding", () => {
     });
 
     await expect(
-      handler("colorPresentation", {
+      handler("color_presentation", {
         workspaceRoot,
         filePath,
         startLine: 1,
@@ -516,7 +516,7 @@ describe("standard tool forwarding", () => {
       }),
     ).rejects.toThrow();
     await expect(
-      handler("inlayHints", {
+      handler("inlay_hints", {
         workspaceRoot,
         filePath,
         startLine: 3,
@@ -526,7 +526,7 @@ describe("standard tool forwarding", () => {
       }),
     ).rejects.toThrow("end must not precede start");
     await expect(
-      handler("inlineValues", {
+      handler("inline_values", {
         workspaceRoot,
         filePath,
         startLine: 1,
@@ -560,7 +560,7 @@ describe("standard tool forwarding", () => {
       documentStore: new DocumentStore(),
     });
 
-    await handler("inlineValues", {
+    await handler("inline_values", {
       workspaceRoot,
       filePath,
       startLine: 2,
@@ -606,7 +606,7 @@ describe("standard tool forwarding", () => {
       documentStore: new DocumentStore(),
     });
 
-    const result = await handler("callHierarchyPrepare", {
+    const result = await handler("call_hierarchy_prepare", {
       workspaceRoot,
       filePath,
       line: 1,
@@ -631,7 +631,11 @@ describe("standard tool forwarding", () => {
       documentStore: new DocumentStore(),
     });
 
-    await handler("semanticTokensFullDelta", { workspaceRoot, filePath, previousResultId: "abc" });
+    await handler("semantic_tokens_full_delta", {
+      workspaceRoot,
+      filePath,
+      previousResultId: "abc",
+    });
 
     expect(session.requests[0]).toEqual({
       method: "textDocument/semanticTokens/full/delta",
@@ -662,10 +666,10 @@ describe("standard tool forwarding", () => {
       documentStore: new DocumentStore(),
     });
 
-    await handler("callHierarchyIncoming", { workspaceRoot, serverId: "ts", item });
-    await handler("callHierarchyOutgoing", { workspaceRoot, serverId: "ts", item });
-    await handler("typeHierarchySupertypes", { workspaceRoot, serverId: "ts", item });
-    await handler("typeHierarchySubtypes", { workspaceRoot, serverId: "ts", item });
+    await handler("call_hierarchy_incoming", { workspaceRoot, serverId: "ts", item });
+    await handler("call_hierarchy_outgoing", { workspaceRoot, serverId: "ts", item });
+    await handler("type_hierarchy_supertypes", { workspaceRoot, serverId: "ts", item });
+    await handler("type_hierarchy_subtypes", { workspaceRoot, serverId: "ts", item });
 
     expect(session.requests).toEqual([
       { method: "callHierarchy/incomingCalls", params: { item } },
@@ -793,7 +797,7 @@ describe("standard tool forwarding", () => {
     });
 
     await expect(
-      handler("completionResolve", { workspaceRoot, item: { label: "x" } }),
-    ).rejects.toThrow("Tool completionResolve requires serverId");
+      handler("completion_resolve", { workspaceRoot, item: { label: "x" } }),
+    ).rejects.toThrow("Tool completion_resolve requires serverId");
   });
 });
