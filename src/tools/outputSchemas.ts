@@ -235,7 +235,12 @@ export const diagnosticsOutputSchema = z.object({
   error: z.string().optional(),
 });
 
-const editSuccessBaseSchema = z.object({ ok: z.literal(true), applied: z.boolean() });
+const editSuccessBaseSchema = z.object({
+  ok: z.literal(true),
+  applied: z.boolean(),
+  message: z.string().optional(),
+  changedFiles: z.array(changedFileSchema).optional(),
+});
 
 export const editToolOutputSchemas = {
   lsp_rename: editOutputSchema(z.object({ edit: workspaceEditSchema.optional() })),
@@ -336,20 +341,13 @@ export const stopWorkspaceOutputSchema = z.object({
   ),
 });
 
-function editOutputSchema(extraSuccessFields: z.ZodType): z.ZodType {
+function editOutputSchema(extraSuccessFields: z.ZodObject): z.ZodType {
   return z.object({
     ok: z.boolean(),
     results: z.record(
       z.string(),
       z.union([
-        editSuccessBaseSchema
-          .and(
-            z.object({
-              message: z.string().optional(),
-              changedFiles: z.array(changedFileSchema).optional(),
-            }),
-          )
-          .and(extraSuccessFields),
+        editSuccessBaseSchema.extend(extraSuccessFields.shape),
         structuredErrorSchema.extend({
           applied: z.boolean().optional(),
           changedFiles: z.array(changedFileSchema).optional(),

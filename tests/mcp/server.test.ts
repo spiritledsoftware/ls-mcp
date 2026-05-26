@@ -102,6 +102,38 @@ describe("createMcpServer", () => {
     await handle.close();
   });
 
+  it("returns edit-tool successes through MCP structured output validation", async () => {
+    const payload = {
+      ok: true,
+      results: {
+        ts: {
+          ok: true,
+          applied: false,
+          message: "Edits were returned but not applied.",
+          edits: [],
+        },
+      },
+    };
+    const handle = createMcpServer(
+      testRegistry([
+        {
+          name: "format_document",
+          outputSchema: editToolOutputSchemas.lsp_format_document,
+          handler: () => payload,
+        },
+      ]),
+    );
+    const client = await connectClient(handle);
+
+    await client.listTools();
+    const result = await client.callTool({ name: "format_document", arguments: {} });
+
+    expect(result.structuredContent).toEqual(payload);
+    expect(result.content).toEqual([{ type: "text", text: JSON.stringify(payload) }]);
+    await client.close();
+    await handle.close();
+  });
+
   it("wraps object handler results as structured content and JSON text content", async () => {
     const payload = { ok: true, value: 42 };
     const handle = createMcpServer(
