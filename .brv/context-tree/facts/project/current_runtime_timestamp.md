@@ -34,16 +34,25 @@ timestamp supplied -> normalize as ISO 8601 fact -> curate into facts/project
 
 ## Narrative
 ### Structure
-A single timestamp fact stored as a project-level knowledge entry for session reference.
+A timestamp fact stored as a project-level knowledge entry for session reference, with chronological context preserved rather than overwritten.
 
 ### Dependencies
 Depends on the injected curate context, history, metadata, and task ID variables supplied by the caller.
 
+### Chronology
+1. Historical runtime reference: `current_runtime_timestamp.md` captured 2026-05-26T10:04:55.754Z as the session runtime timestamp.
+2. Later planning snapshot: `context_and_plan_execution_notes.md` records the 2026-05-26T09:22:02.646Z planning context for the LSP MCP server workstream.
+
+### Current State
+The runtime timestamp remains a historical session fact. For current planning context, prefer `context_and_plan_execution_notes.md`; that newer planning note supersedes this runtime-only reference when deciding what project plan, execution guidance, or workstream context is current.
+
 ### Highlights
-Preserves the exact runtime timestamp for recall and temporal reasoning.
+Preserves the exact runtime timestamp for recall and temporal reasoning while distinguishing historical timestamp context from current planning state.
 
 ## Facts
 - **current_runtime_timestamp**: Current date and time is 2026-05-26T10:04:55.754Z [project]
+- **historical_context**: This file preserves a runtime timestamp as historical session context rather than current planning guidance. [project]
+- **current_planning_context**: Use context_and_plan_execution_notes.md as the current planning-context reference for the LSP MCP workstream. [project]
 
 ---
 

@@ -8,6 +8,9 @@ export const positionInputSchema = z.object({
   strict: z.boolean().optional(),
   line: z.number().int().positive(),
   character: z.number().int().positive(),
+  query: z.string().optional(),
+  limit: z.number().int().positive().optional(),
+  includeAll: z.boolean().optional(),
 });
 
 export const fileInputSchema = z.object({

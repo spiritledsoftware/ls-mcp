@@ -101,11 +101,14 @@ export function createStandardToolHandler(options: StandardToolHandlerOptions) {
           const rawResult = await acquired.session.sendRequest(entry.lspMethod, requestParams, {
             signal: context?.signal,
           });
+          const normalizedResult = normalizeLspResult(rawResult, {
+            workspaceRoot: acquired.workspaceRoot,
+          });
           return {
             serverId: acquired.serverId,
             result: {
               ok: true,
-              result: normalizeLspResult(rawResult, { workspaceRoot: acquired.workspaceRoot }),
+              result: postProcessResult(entry, parsed, normalizedResult),
             },
           } satisfies PerServerResult;
         } catch (error) {
@@ -262,6 +265,77 @@ function buildRequestParams(entry: MethodRegistryEntry, input: Record<string, un
   }
 }
 
+function postProcessResult(
+  entry: MethodRegistryEntry,
+  input: Record<string, unknown>,
+  result: unknown,
+): unknown {
+  if (entry.toolName !== "completion" || input.includeAll === true) {
+    return result;
+  }
+  return limitCompletionResult(result, optionalString(input.query), completionLimit(input.limit));
+}
+
+function completionLimit(value: unknown): number {
+  return typeof value === "number" ? value : 100;
+}
+
+function limitCompletionResult(result: unknown, query: string | undefined, limit: number): unknown {
+  if (Array.isArray(result)) {
+    const filteredItems = filterCompletionItems(result, query);
+    return {
+      isIncomplete: false,
+      items: filteredItems.slice(0, limit),
+      lspMcpMeta: completionMeta(result.length, filteredItems.length, limit),
+    };
+  }
+  if (!isRecord(result) || !Array.isArray(result.items)) {
+    return result;
+  }
+  const filteredItems = filterCompletionItems(result.items, query);
+  return {
+    ...result,
+    items: filteredItems.slice(0, limit),
+    lspMcpMeta: completionMeta(result.items.length, filteredItems.length, limit),
+  };
+}
+
+function completionMeta(totalItems: number, matchedItems: number, limit: number) {
+  return {
+    totalItems,
+    matchedItems,
+    returnedItems: Math.min(matchedItems, limit),
+    truncated: matchedItems > limit,
+  };
+}
+
+function filterCompletionItems(items: unknown[], query: string | undefined): unknown[] {
+  if (!query) {
+    return items;
+  }
+  const normalizedQuery = query.toLowerCase();
+  return items.filter((item) => completionSearchText(item).includes(normalizedQuery));
+}
+
+function completionSearchText(item: unknown): string {
+  if (!isRecord(item)) {
+    return "";
+  }
+  return [item.label, item.detail, item.documentation, labelDetailsText(item.labelDetails)]
+    .filter((value): value is string => typeof value === "string")
+    .join("\n")
+    .toLowerCase();
+}
+
+function labelDetailsText(value: unknown): string | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  return [value.detail, value.description]
+    .filter((item): item is string => typeof item === "string")
+    .join(" ");
+}
+
 function range(input: Record<string, unknown>) {
   return {
     start: mcpPositionToLspPosition(position(input.startLine, input.startCharacter)),
@@ -302,4 +376,8 @@ function position(line: unknown, character: unknown): McpPosition {
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

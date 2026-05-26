@@ -4,6 +4,7 @@ import { z } from "zod";
 import { describe, expect, it, vi } from "vitest";
 
 import { createMcpServer, listLspServers } from "../../src/mcp/server.js";
+import { editToolOutputSchemas } from "../../src/tools/outputSchemas.js";
 import type { ToolHandlerContext, ToolRegistry } from "../../src/tools/registerTools.js";
 
 describe("list_servers", () => {
@@ -38,6 +39,97 @@ describe("createMcpServer", () => {
       type: "object",
       properties: { ok: { type: "boolean" } },
     });
+    await client.close();
+    await handle.close();
+  });
+
+  it("handles union output schemas through the MCP SDK path", async () => {
+    const payload = { ok: true, value: 42 };
+    const handle = createMcpServer(
+      testRegistry([
+        {
+          name: "union_output",
+          outputSchema: z.union([
+            z.object({ ok: z.literal(true), value: z.number() }),
+            z.object({ ok: z.literal(false), error: z.string() }),
+          ]),
+          handler: () => payload,
+        },
+      ]),
+    );
+    const client = await connectClient(handle);
+
+    const tools = await client.listTools();
+    const unionTool = tools.tools.find((tool) => tool.name === "union_output");
+    const result = await client.callTool({ name: "union_output", arguments: {} });
+
+    expect(unionTool?.outputSchema).toBeUndefined();
+    expect(result.structuredContent).toEqual(payload);
+    expect(result.content).toEqual([{ type: "text", text: JSON.stringify(payload) }]);
+    await client.close();
+    await handle.close();
+  });
+
+  it("returns edit-tool failures through MCP structured output validation", async () => {
+    const payload = {
+      ok: false,
+      results: {
+        ts: {
+          ok: false,
+          error: "format failed",
+          code: -32603,
+          method: "textDocument/formatting",
+        },
+      },
+    };
+    const handle = createMcpServer(
+      testRegistry([
+        {
+          name: "format_document",
+          outputSchema: editToolOutputSchemas.lsp_format_document,
+          handler: () => payload,
+        },
+      ]),
+    );
+    const client = await connectClient(handle);
+
+    await client.listTools();
+    const result = await client.callTool({ name: "format_document", arguments: {} });
+
+    expect(result.structuredContent).toEqual(payload);
+    expect(result.content).toEqual([{ type: "text", text: JSON.stringify(payload) }]);
+    await client.close();
+    await handle.close();
+  });
+
+  it("returns edit-tool successes through MCP structured output validation", async () => {
+    const payload = {
+      ok: true,
+      results: {
+        ts: {
+          ok: true,
+          applied: false,
+          message: "Edits were returned but not applied.",
+          edits: [],
+        },
+      },
+    };
+    const handle = createMcpServer(
+      testRegistry([
+        {
+          name: "format_document",
+          outputSchema: editToolOutputSchemas.lsp_format_document,
+          handler: () => payload,
+        },
+      ]),
+    );
+    const client = await connectClient(handle);
+
+    await client.listTools();
+    const result = await client.callTool({ name: "format_document", arguments: {} });
+
+    expect(result.structuredContent).toEqual(payload);
+    expect(result.content).toEqual([{ type: "text", text: JSON.stringify(payload) }]);
     await client.close();
     await handle.close();
   });

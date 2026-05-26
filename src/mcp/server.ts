@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { z } from "zod";
 
 import {
   createToolRegistry,
@@ -32,13 +33,14 @@ export function createMcpServer(
 }
 
 function registerTool(server: McpServer, tool: RegisteredTool): void {
+  const outputSchema = schemaHasObjectRoot(tool.outputSchema) ? tool.outputSchema : undefined;
   server.registerTool(
     tool.name,
     {
       title: tool.title,
       description: tool.description,
       ...(tool.inputSchema ? { inputSchema: tool.inputSchema } : {}),
-      ...(tool.outputSchema ? { outputSchema: tool.outputSchema } : {}),
+      ...(outputSchema ? { outputSchema } : {}),
     },
     async (input, extra) => {
       const result = await tool.handler(input, { signal: extra.signal });
@@ -53,4 +55,22 @@ function registerTool(server: McpServer, tool: RegisteredTool): void {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function schemaHasObjectRoot(schema: z.ZodType | undefined): boolean {
+  if (!schema) {
+    return false;
+  }
+  const maybeSchema = schema as z.ZodType & {
+    _zod?: { def?: { type?: string; shape?: unknown } };
+    _def?: { typeName?: string; type?: string; shape?: unknown };
+    shape?: unknown;
+  };
+  return (
+    maybeSchema._zod?.def?.type === "object" ||
+    maybeSchema._zod?.def?.shape !== undefined ||
+    maybeSchema._def?.typeName === "ZodObject" ||
+    maybeSchema._def?.type === "object" ||
+    maybeSchema.shape !== undefined
+  );
 }
