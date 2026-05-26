@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { DiagnosticStore } from "../../src/lsp/diagnosticStore.js";
 import { DocumentStore, filePathToUri } from "../../src/lsp/documentStore.js";
+import { ServerResolutionError } from "../../src/lsp/serverIdentity.js";
 import { LspRequestTimeoutError, type LspRequestOptions } from "../../src/lsp/session.js";
 import { LspSessionManager } from "../../src/lsp/sessionManager.js";
 import type { AcquiredLspSession, ManagedLspSession } from "../../src/lsp/sessionManager.js";
@@ -73,6 +74,25 @@ function acquired(serverId: string, session: ManagedLspSession, workspaceRoot: s
   } satisfies AcquiredLspSession;
 }
 
+function serverResolutionError(serverId: string) {
+  return new ServerResolutionError({
+    code: "unknown_server",
+    serverId,
+    message: `Unknown LSP server "${serverId}".`,
+    suggestions: [
+      {
+        id: "typescript-language-server",
+        score: 80,
+        reasons: ["prefix match"],
+        aliases: ["typescript"],
+        aliasDetails: [{ value: "typescript", kind: "language-id" }],
+        languageIds: ["typescript"],
+        extensions: [".ts"],
+      },
+    ],
+  });
+}
+
 async function createWorkspaceFile() {
   const workspaceRoot = await mkdtemp(resolve(tmpdir(), "lsp-mcp-diagnostics-"));
   const filePath = resolve(workspaceRoot, "app.ts");
@@ -93,6 +113,29 @@ function createHandler(sessions: AcquiredLspSession[], waitMs = 25) {
 }
 
 describe("diagnostics", () => {
+  it("preserves structured server resolution errors", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const handler = createDiagnosticsToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => {
+          throw serverResolutionError("typescrip");
+        }),
+        getSessionsForWorkspace: vi.fn(async () => []),
+      },
+      documentStore: new DocumentStore(),
+      diagnosticStore: new DiagnosticStore(),
+    });
+
+    const result = await handler({ workspaceRoot, filePath, serverId: "typescrip" });
+
+    expect(result.results.acquisition).toMatchObject({
+      ok: false,
+      code: "unknown_server",
+      serverId: "typescrip",
+      suggestions: [expect.objectContaining({ id: "typescript-language-server" })],
+    });
+  });
+
   it("returns cached push diagnostics for push-only servers", async () => {
     const { workspaceRoot, filePath } = await createWorkspaceFile();
     const session = createSession();

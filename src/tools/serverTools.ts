@@ -4,6 +4,7 @@ import { extname, resolve } from "node:path";
 import { ServerResolutionError } from "../lsp/serverIdentity.js";
 import { resolveLspServerCommandStatus } from "../registry/installer.js";
 import { serverInfoSchema, serverSuggestionSchema } from "./outputSchemas.js";
+import { structuredToolError } from "./toolErrors.js";
 import type {
   LspActiveSessionStatus,
   LspServerDefinitionStatus,
@@ -52,14 +53,23 @@ export const lspStopWorkspaceInputSchema = z
   })
   .strict();
 
-export const lspServersSchema = z.object({
-  ok: z.boolean(),
-  servers: z.array(serverInfoSchema).readonly().optional(),
-  error: z.string().optional(),
-  code: z.string().optional(),
-  serverId: z.string().optional(),
-  suggestions: z.array(serverSuggestionSchema).readonly().optional(),
-});
+export const lspServersSchema = z.union([
+  z
+    .object({
+      ok: z.literal(true),
+      servers: z.array(serverInfoSchema).readonly(),
+    })
+    .strict(),
+  z
+    .object({
+      ok: z.literal(false),
+      error: z.string(),
+      code: z.string().optional(),
+      serverId: z.string().optional(),
+      suggestions: z.array(serverSuggestionSchema).readonly().optional(),
+    })
+    .strict(),
+]);
 
 export const searchServersSchema = z.object({
   ok: z.literal(true),
@@ -99,9 +109,15 @@ export function createServerToolHandlers(dependencies: ServerToolDependencies) {
 
     async serverStatus(input: unknown): Promise<unknown> {
       const parsed = lspServerStatusInputSchema.parse(input);
-      const servers = await Promise.all(
-        sessionManager.listServerStatuses(parsed).map(toServerInfo),
-      );
+      let servers: Awaited<ReturnType<typeof toServerInfo>>[];
+      try {
+        servers = await Promise.all(sessionManager.listServerStatuses(parsed).map(toServerInfo));
+      } catch (error) {
+        if (error instanceof ServerResolutionError) {
+          return { ok: false, ...structuredToolError(error) };
+        }
+        throw error;
+      }
       const matchedServerIds = new Set(servers.map((server) => server.id));
       const matchedConfiguredIds = new Set(
         servers.map((server) => server.configuredId).filter((id): id is string => Boolean(id)),
@@ -130,7 +146,15 @@ export function createServerToolHandlers(dependencies: ServerToolDependencies) {
 
     async stopServer(input: unknown): Promise<unknown> {
       const parsed = lspStopServerInputSchema.parse(input);
-      const stopped = await sessionManager.stopServer(parsed);
+      let stopped: boolean;
+      try {
+        stopped = await sessionManager.stopServer(parsed);
+      } catch (error) {
+        if (error instanceof ServerResolutionError) {
+          return { ok: false, ...structuredToolError(error) };
+        }
+        throw error;
+      }
       const workspaceRoot = resolve(parsed.workspaceRoot);
       return stopped
         ? {
@@ -214,8 +238,10 @@ function matchesListTarget(
 }
 
 async function toServerInfo(server: LspServerDefinitionStatus) {
+  const { downloads, server: _serverConfig, ...publicServer } = server;
+  void downloads;
   return {
-    ...server,
+    ...publicServer,
     install: await getInstallStatus(server),
   };
 }

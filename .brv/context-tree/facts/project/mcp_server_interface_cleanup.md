@@ -1,36 +1,43 @@
 ---
 title: MCP Server Interface Cleanup
-summary: Notes on MCP server interface cleanup, including tool/result normalization and cleanup of LSP-facing server behavior
+summary: Project facts covering MCP server interface cleanup and related LSP MCP implementation planning.
 tags: []
 related: []
 keywords: []
 createdAt: '2026-05-26T15:08:47.970Z'
-updatedAt: '2026-05-26T15:08:47.970Z'
+updatedAt: '2026-05-26T18:08:33.375Z'
 ---
 ## Reason
-Curate the single-pass RLM context into durable project knowledge
+Capture the project-level cleanup notes for the MCP server interface.
 
 ## Raw Concept
 **Task:**
-Document MCP server interface cleanup work and related server behavior adjustments
+Document the MCP server interface cleanup work and its related planning context.
 
 **Changes:**
 - Captured cleanup-related implementation notes from the provided context
 - Preserved interface and result-handling concerns for the MCP/LSP boundary
+- Recorded cleanup focus for the MCP server interface
+- Captured its relationship to LSP MCP implementation details and cleanup planning
 
 **Flow:**
-Context review -> identify cleanup notes -> curate durable project knowledge
+cleanup notes -> interface tightening -> implementation alignment -> planning follow-up
 
-**Timestamp:** 2026-05-26
+**Timestamp:** 2026-05-26T18:08:21.401Z
 
 **Author:** ByteRover context engineer
 
 ## Narrative
 ### Structure
-Records project-level knowledge about MCP server interface cleanup and related normalization behavior.
+This knowledge entry is organized as project-level facts about MCP server interface cleanup and adjacent planning references.
 
 ### Dependencies
-Relates to MCP server code and LSP-facing result handling.
+Depends on the LSP MCP server implementation context and interface cleanup planning materials.
 
 ### Highlights
-Preserves cleanup notes as durable context for future reference.
+Provides a concise durable record that the interface cleanup work exists and is tied to the broader LSP MCP server effort.
+
+## Facts
+- **mcp_server_interface_cleanup**: This context captures cleanup work for the MCP server interface. [project]
+- **mcp_interface_cleanup**: The cleanup focuses on tightening the public interface and related implementation details. [project]
+- **lsp_mcp_server**: The work references the LSP MCP server implementation and interface cleanup planning materials. [project]

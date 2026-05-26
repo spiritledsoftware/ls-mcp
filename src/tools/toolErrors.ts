@@ -1,8 +1,12 @@
+import type { ServerSuggestion } from "../lsp/serverIdentity.js";
+
 export interface StructuredToolError {
   error: string;
   code?: string | number;
   method?: string;
   timeoutMs?: number;
+  serverId?: string;
+  suggestions?: readonly ServerSuggestion[];
 }
 
 export function structuredToolError(error: unknown): StructuredToolError {
@@ -18,6 +22,12 @@ export function structuredToolError(error: unknown): StructuredToolError {
     }
     if (typeof error.timeoutMs === "number") {
       result.timeoutMs = error.timeoutMs;
+    }
+    if (typeof error.serverId === "string") {
+      result.serverId = error.serverId;
+    }
+    if (Array.isArray(error.suggestions)) {
+      result.suggestions = error.suggestions as ServerSuggestion[];
     }
   }
   return result;

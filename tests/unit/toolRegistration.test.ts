@@ -106,6 +106,14 @@ describe("tool registration", () => {
         servers: [sampleServerInfo({ id: "typescript-language-server" })],
       }).success,
     ).toBe(true);
+    expect(tools.get("list_servers")!.outputSchema!.safeParse({ ok: true }).success).toBe(false);
+    expect(
+      tools.get("list_servers")!.outputSchema!.safeParse({
+        ok: true,
+        servers: [],
+        error: "unexpected",
+      }).success,
+    ).toBe(false);
     expect(
       tools.get("list_servers")!.outputSchema!.safeParse({
         ok: true,
@@ -268,6 +276,19 @@ describe("tool registration", () => {
     ).toMatchObject({ apply: false });
   });
 
+  it("validates real server tool handler output against registered schemas", async () => {
+    const registry = createToolRegistry({ config: {} });
+    const tools = new Map(registry.tools.map((tool) => [tool.name, tool]));
+    const listServers = tools.get("list_servers")!;
+    const serverStatus = tools.get("server_status")!;
+
+    const listResult = await listServers.handler({});
+    const statusResult = await serverStatus.handler({ workspaceRoot: repoRoot });
+
+    expect(listServers.outputSchema!.safeParse(listResult).success).toBe(true);
+    expect(serverStatus.outputSchema!.safeParse(statusResult).success).toBe(true);
+  });
+
   it("exposes lifecycle cleanup for its session manager", async () => {
     const shutdownAll = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
     const sessionManager = {
@@ -393,7 +414,11 @@ describe("tool registration", () => {
     });
     await expect(
       statusTool.handler({ workspaceRoot: unrelatedWorkspaceRoot, serverId: "projectCustom" }),
-    ).rejects.toThrow('Unknown LSP server "projectCustom".');
+    ).resolves.toMatchObject({
+      ok: false,
+      code: "unknown_server",
+      serverId: "projectCustom",
+    });
 
     await registry.shutdown();
   });
@@ -459,9 +484,15 @@ function sampleServerInfo(overrides: Record<string, unknown> = {}): Record<strin
       { value: "ts_ls", kind: "lspconfig" },
     ],
     upstream: {
-      mason: "typescript-language-server",
-      lspconfig: "ts_ls",
+      mason: {
+        package: "typescript-language-server",
+        version: "5.3.0",
+        source: "npm:typescript-language-server",
+        lspconfig: "ts_ls",
+      },
     },
+    installStrategy: "npm",
+    version: "5.3.0",
     install: {
       status: "ready",
       command: "typescript-language-server",

@@ -81,11 +81,11 @@ Build and start the MCP server through your MCP host. Then call an LSP tool such
 }
 ```
 
-For file-targeted tools, `serverId` is optional. If omitted, the tool runs against every configured or built-in server whose language IDs or file extensions match the target file. Add `"serverId": "typescript"` to target one server.
+For file-targeted tools, `serverId` is optional. If omitted, the tool runs against every configured or built-in server whose language IDs or file extensions match the target file. Add `"serverId": "typescript-language-server"` to target one server by canonical ID. Configured keys and aliases such as `"typescript"` and `"ts_ls"` also work when they resolve unambiguously.
 
-Built-in registry coverage follows opencode's documented LSP server set, plus the existing `json` built-in. Canonical built-in IDs include `astro`, `bash`, `clangd`, `clojure-lsp`, `csharp`, `dart`, `deno`, `elixir-ls`, `eslint`, `fsharp`, `gleam`, `gopls`, `hls`, `jdtls`, `json`, `julials`, `kotlin-ls`, `lua-ls`, `nixd`, `ocaml-lsp`, `oxlint`, `php intelephense`, `prisma`, `pyright`, `razor`, `ruby-lsp`, `rust`, `sourcekit-lsp`, `svelte`, `terraform`, `tinymist`, `typescript`, `vue`, `yaml-ls`, and `zls`.
+Built-in registry coverage follows opencode's documented LSP server set, plus the existing JSON built-in. Public canonical built-in IDs are recognizable language-server IDs such as `typescript-language-server`, `vscode-json-language-server`, `pyright-langserver`, `gopls`, `rust-analyzer`, `yaml-language-server`, `svelte-language-server`, `intelephense`, and `julia-language-server`.
 
-The built-in registry also accepts Mason and nvim-lspconfig aliases where available, such as `bashls`, `clojure_lsp`, `denols`, `elixirls`, `fsautocomplete`, `lua_ls`, `ocamllsp`, `intelephense`, `prismals`, `ruby_lsp`, `rust_analyzer`, `terraformls`, `ts_ls`, `vue_ls`, and `yamlls`. Compatibility aliases `go`, `python`, and `yaml` continue to resolve to `gopls`, `pyright`, and `yaml-ls`.
+The built-in registry also accepts configured IDs, internal registry IDs, Mason aliases, nvim-lspconfig aliases, command/package names, and language IDs where available. Compatibility aliases `go`, `python`, and `yaml` continue to resolve to `gopls`, `pyright-langserver`, and `yaml-language-server`. Ambiguous aliases fail with structured suggestions; use `search_servers` to discover the canonical ID to pass.
 
 Mason data is vendored as a generated snapshot and never fetched at runtime, so built-in metadata and aliases are deterministic and offline. Managed downloads are available only for built-ins with supported pinned install strategies; other built-ins use system commands or explicit configured commands.
 

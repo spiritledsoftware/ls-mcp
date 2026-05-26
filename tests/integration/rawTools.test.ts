@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { AcquiredLspSession, ManagedLspSession } from "../../src/lsp/sessionManager.js";
+import { ServerResolutionError } from "../../src/lsp/serverIdentity.js";
 import { LspRequestTimeoutError, type LspRequestOptions } from "../../src/lsp/session.js";
 import { createRawToolHandler } from "../../src/tools/rawTools.js";
 
@@ -66,6 +67,28 @@ function successfulAcquisition(serverId: string, session: ManagedLspSession) {
 
 function failedAcquisition(serverId: string, error: string) {
   return { ok: false as const, value: { serverId, error } };
+}
+
+function serverResolutionError(
+  serverId: string,
+  code: "unknown_server" | "ambiguous_server" = "unknown_server",
+) {
+  return new ServerResolutionError({
+    code,
+    serverId,
+    message: `${code === "unknown_server" ? "Unknown" : "Ambiguous"} LSP server "${serverId}".`,
+    suggestions: [
+      {
+        id: "typescript-language-server",
+        score: 80,
+        reasons: ["prefix match"],
+        aliases: ["typescript"],
+        aliasDetails: [{ value: "typescript", kind: "language-id" }],
+        languageIds: ["typescript"],
+        extensions: [".ts"],
+      },
+    ],
+  });
 }
 
 describe("raw LSP request and notify tools", () => {
@@ -142,6 +165,60 @@ describe("raw LSP request and notify tools", () => {
       code: "LSP_REQUEST_TIMEOUT",
       method: "workspace/symbol",
       timeoutMs: 50,
+    });
+  });
+
+  it("returns structured acquisition errors for raw requests", async () => {
+    const handler = createRawToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => []),
+        getSessionsForFileSettled: vi.fn(async () => {
+          throw serverResolutionError("typescrip");
+        }),
+        getSessionsForWorkspace: vi.fn(async () => []),
+        getSessionsForWorkspaceSettled: vi.fn(async () => []),
+      },
+    });
+
+    const result = await handler("lsp_request", {
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/app.ts",
+      serverId: "typescrip",
+      method: "textDocument/hover",
+    });
+
+    expect(result.results.acquisition).toMatchObject({
+      ok: false,
+      code: "unknown_server",
+      serverId: "typescrip",
+      suggestions: [expect.objectContaining({ id: "typescript-language-server" })],
+    });
+  });
+
+  it("returns ambiguous acquisition errors for raw requests", async () => {
+    const handler = createRawToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => []),
+        getSessionsForFileSettled: vi.fn(async () => {
+          throw serverResolutionError("javascript", "ambiguous_server");
+        }),
+        getSessionsForWorkspace: vi.fn(async () => []),
+        getSessionsForWorkspaceSettled: vi.fn(async () => []),
+      },
+    });
+
+    const result = await handler("lsp_request", {
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/app.ts",
+      serverId: "javascript",
+      method: "textDocument/hover",
+    });
+
+    expect(result.results.acquisition).toMatchObject({
+      ok: false,
+      code: "ambiguous_server",
+      serverId: "javascript",
+      suggestions: [expect.objectContaining({ id: "typescript-language-server" })],
     });
   });
 

@@ -123,7 +123,7 @@ export interface LspServerDefinitionStatus {
   args: readonly string[];
   languageIds: readonly string[];
   extensions: readonly string[];
-  installStrategy?: string;
+  installStrategy?: BuiltInServerMetadata["installStrategy"]["type"];
   version?: string;
   aliases: readonly string[];
   aliasDetails: readonly ServerAliasDetail[];

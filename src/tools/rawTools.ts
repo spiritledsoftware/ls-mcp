@@ -140,7 +140,15 @@ async function acquireRawToolSessions(
     }
   }
 
-  const settled = await acquireSettledSessions(sessionManager, input);
+  let settled: SettledLspSessionAcquisition[];
+  try {
+    settled = await acquireSettledSessions(sessionManager, input);
+  } catch (error) {
+    return {
+      sessions: [],
+      results: { acquisition: { ok: false, ...structuredToolError(error) } },
+    };
+  }
   const sessions: AcquiredLspSession[] = [];
   const results: RawToolResult["results"] = {};
   for (const acquisition of settled) {

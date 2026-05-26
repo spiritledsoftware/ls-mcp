@@ -304,11 +304,89 @@ describe("server lifecycle tools", () => {
     });
   });
 
+  it("returns structured errors for unknown status server IDs", async () => {
+    const { workspaceRoot } = await createWorkspace();
+    const registry = createToolRegistry({ config: {} });
+
+    const result = await callTool(registry, "server_status", {
+      workspaceRoot,
+      serverId: "typescrip",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "unknown_server",
+      serverId: "typescrip",
+      suggestions: expect.arrayContaining([
+        expect.objectContaining({ id: "typescript-language-server" }),
+      ]),
+    });
+  });
+
+  it("returns structured errors for unknown stop server IDs", async () => {
+    const { workspaceRoot } = await createWorkspace();
+    const registry = createToolRegistry({ config: {} });
+
+    const result = await callTool(registry, "stop_server", {
+      workspaceRoot,
+      serverId: "typescrip",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "unknown_server",
+      serverId: "typescrip",
+      suggestions: expect.arrayContaining([
+        expect.objectContaining({ id: "typescript-language-server" }),
+      ]),
+    });
+  });
+
   it("returns structured errors for ambiguous list server IDs", async () => {
     const { workspaceRoot } = await createWorkspace();
     const registry = createToolRegistry({ config: { lsp: { servers: {} } } });
 
     const result = await callTool(registry, "list_servers", {
+      workspaceRoot,
+      serverId: "javascript",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "ambiguous_server",
+      serverId: "javascript",
+      suggestions: expect.arrayContaining([
+        expect.objectContaining({ id: "typescript-language-server" }),
+        expect.objectContaining({ id: "deno-language-server" }),
+      ]),
+    });
+  });
+
+  it("returns structured errors for ambiguous status server IDs", async () => {
+    const { workspaceRoot } = await createWorkspace();
+    const registry = createToolRegistry({ config: { lsp: { servers: {} } } });
+
+    const result = await callTool(registry, "server_status", {
+      workspaceRoot,
+      serverId: "javascript",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "ambiguous_server",
+      serverId: "javascript",
+      suggestions: expect.arrayContaining([
+        expect.objectContaining({ id: "typescript-language-server" }),
+        expect.objectContaining({ id: "deno-language-server" }),
+      ]),
+    });
+  });
+
+  it("returns structured errors for ambiguous stop server IDs", async () => {
+    const { workspaceRoot } = await createWorkspace();
+    const registry = createToolRegistry({ config: { lsp: { servers: {} } } });
+
+    const result = await callTool(registry, "stop_server", {
       workspaceRoot,
       serverId: "javascript",
     });

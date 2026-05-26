@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DocumentStore, filePathToUri } from "../../src/lsp/documentStore.js";
+import { ServerResolutionError } from "../../src/lsp/serverIdentity.js";
 import { LspRequestTimeoutError, type LspRequestOptions } from "../../src/lsp/session.js";
 import type { AcquiredLspSession, ManagedLspSession } from "../../src/lsp/sessionManager.js";
 import { createEditToolHandler, EDITS_NOT_APPLIED_MESSAGE } from "../../src/tools/editTools.js";
@@ -62,6 +63,28 @@ function acquired(
     languageIds: ["typescript"],
     extensions: [".ts"],
   };
+}
+
+function serverResolutionError(
+  serverId: string,
+  code: "unknown_server" | "ambiguous_server" = "unknown_server",
+) {
+  return new ServerResolutionError({
+    code,
+    serverId,
+    message: `${code === "unknown_server" ? "Unknown" : "Ambiguous"} LSP server "${serverId}".`,
+    suggestions: [
+      {
+        id: "typescript-language-server",
+        score: 80,
+        reasons: ["prefix match"],
+        aliases: ["typescript"],
+        aliasDetails: [{ value: "typescript", kind: "language-id" }],
+        languageIds: ["typescript"],
+        extensions: [".ts"],
+      },
+    ],
+  });
 }
 
 async function createWorkspaceFile(content = "const value = 1;\n") {
@@ -151,6 +174,58 @@ describe("edit-producing tools", () => {
       code: "LSP_REQUEST_TIMEOUT",
       method: "textDocument/formatting",
       timeoutMs: 40,
+    });
+  });
+
+  it("preserves structured server resolution errors", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const handler = createEditToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => {
+          throw serverResolutionError("typescrip");
+        }),
+        resolveServerId: vi.fn((serverId: string) => serverId),
+      },
+      documentStore: new DocumentStore(),
+    });
+
+    const result = await handler("lsp_format_document", {
+      workspaceRoot,
+      filePath,
+      serverId: "typescrip",
+    });
+
+    expect(result.results.acquisition).toMatchObject({
+      ok: false,
+      code: "unknown_server",
+      serverId: "typescrip",
+      suggestions: [expect.objectContaining({ id: "typescript-language-server" })],
+    });
+  });
+
+  it("preserves ambiguous server resolution errors", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const handler = createEditToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => {
+          throw serverResolutionError("javascript", "ambiguous_server");
+        }),
+        resolveServerId: vi.fn((serverId: string) => serverId),
+      },
+      documentStore: new DocumentStore(),
+    });
+
+    const result = await handler("lsp_format_document", {
+      workspaceRoot,
+      filePath,
+      serverId: "javascript",
+    });
+
+    expect(result.results.acquisition).toMatchObject({
+      ok: false,
+      code: "ambiguous_server",
+      serverId: "javascript",
+      suggestions: [expect.objectContaining({ id: "typescript-language-server" })],
     });
   });
 

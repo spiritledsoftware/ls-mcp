@@ -15,9 +15,11 @@ When `serverId` is omitted:
 
 When `serverId` is provided:
 
-- The tool targets exactly that server.
-- Unknown server IDs fail.
+- The tool targets exactly that server after resolving canonical IDs and aliases.
+- Unknown or ambiguous server IDs fail with structured `code`, `serverId`, and `suggestions` fields.
 - For file-targeted tools, a server with match criteria must match the file extension or provided language ID.
+
+Canonical IDs are public language-server IDs, for example `typescript-language-server`, `vscode-json-language-server`, `pyright-langserver`, `rust-analyzer`, and `yaml-language-server`. Aliases include configured IDs, internal registry IDs, Mason names, nvim-lspconfig names such as `ts_ls`, command/package names, and language IDs. Language aliases can be ambiguous in polyglot ecosystems; for example `javascript` can match multiple servers. Use `search_servers` to inspect ranked candidates and then pass the canonical `id`.
 
 For edit-producing tools, `apply: true` requires `serverId` if more than one server matches. This prevents applying edits from multiple servers by accident.
 
@@ -81,7 +83,7 @@ Tools that need document state validate the file against `workspaceRoot`, then o
 
 ## Diagnostics
 
-`lsp_diagnostics` returns diagnostics from matching servers.
+`diagnostics` returns diagnostics from matching servers.
 
 Input fields:
 
@@ -106,11 +108,11 @@ Edit-producing tools return edits by default and do not modify files unless `app
 
 Tools:
 
-- `lsp_rename`
-- `lsp_format_document`
-- `lsp_format_range`
-- `lsp_format_on_type`
-- `lsp_code_actions`
+- `rename`
+- `format_document`
+- `format_range`
+- `format_on_type`
+- `code_actions`
 
 Common input fields:
 
@@ -127,14 +129,14 @@ When `apply` is true:
 - Workspace edits and text edits are written to disk.
 - The input file and changed files are validated against `workspaceRoot` unless `security.allowExternalFiles` is true.
 - The implementation tracks the opened document content hash and rejects stale edits for files where it has an expected hash.
-- `lsp_code_actions` applies a single safe default action only when exactly one actionable action is available. If multiple actionable code actions exist, pass `actionIndex`.
-- Code action commands are subject to the same command policy as `lsp_execute_command`.
+- `code_actions` applies a single safe default action only when exactly one actionable action is available. If multiple actionable code actions exist, pass `actionIndex`.
+- Code action commands are subject to the same command policy as `execute_command`.
 
 Formatting options currently default to `tabSize: 2` and `insertSpaces: true` unless those values are present in the tool input.
 
 ## Command Execution
 
-`lsp_execute_command` sends `workspace/executeCommand` to matching servers.
+`execute_command` sends `workspace/executeCommand` to matching servers.
 
 Input fields:
 
@@ -145,17 +147,17 @@ Input fields:
 - `command`: required LSP command string.
 - `arguments`: optional command arguments array.
 
-Command execution is enabled by default. `commands.enabled: false` disables it globally. `commands.allow.<serverId>` restricts the allowed command strings for a server.
+Command execution is enabled by default. `commands.enabled: false` disables it globally. `commands.allow.<serverId>` restricts the allowed command strings for a server. Allowlist keys are resolved through the same canonical ID and alias resolver and are enforced by canonical server ID.
 
 ## Raw LSP Tools
 
-`lsp_request` sends an arbitrary LSP request:
+`request` sends an arbitrary LSP request:
 
 ```json
 {
   "workspaceRoot": "/absolute/path/to/project",
   "filePath": "/absolute/path/to/project/src/index.ts",
-  "serverId": "typescript",
+  "serverId": "typescript-language-server",
   "method": "textDocument/hover",
   "params": {
     "textDocument": { "uri": "file:///absolute/path/to/project/src/index.ts" },
@@ -164,7 +166,7 @@ Command execution is enabled by default. `commands.enabled: false` disables it g
 }
 ```
 
-`lsp_notify` sends an arbitrary LSP notification and returns `null` per successful server.
+`notify` sends an arbitrary LSP notification and returns `null` per successful server.
 
 Raw tool notes:
 
@@ -177,25 +179,27 @@ Raw tool notes:
 
 ## Server Status And Lifecycle
 
-`lsp_list_servers` lists configured and built-in servers without starting them. It includes server metadata and install status.
+`list_servers` lists configured and built-in servers without starting them. It includes server metadata and install status. Optional `workspaceRoot`, `filePath`, `languageId`, and `serverId` fields filter the result without starting sessions.
 
-`lsp_server_status` reports matching server definitions and active sessions for a workspace. It accepts:
+`search_servers` searches configured and built-in servers by canonical ID, configured ID, registry ID, alias, command, package, language ID, extension, and upstream names. It returns ranked `matches` with `id`, `score`, `reasons`, aliases, language IDs, and extensions.
+
+`server_status` reports matching server definitions and active sessions for a workspace. It accepts:
 
 - `workspaceRoot`: required.
 - `filePath`: optional. When present, status is filtered to file-matching servers.
 - `languageId`: optional.
 - `serverId`: optional.
 
-`lsp_stop_server` stops one running server session for a workspace:
+`stop_server` stops one running server session for a workspace:
 
 ```json
 {
   "workspaceRoot": "/absolute/path/to/project",
-  "serverId": "typescript"
+  "serverId": "typescript-language-server"
 }
 ```
 
-`lsp_stop_workspace` stops all running LSP sessions for a workspace:
+`stop_workspace` stops all running LSP sessions for a workspace:
 
 ```json
 {

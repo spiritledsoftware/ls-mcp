@@ -51,7 +51,10 @@ describe("end-to-end smoke tests", () => {
     expect(hover).toMatchObject({
       ok: true,
       results: {
-        alpha: { ok: true, result: { contents: { value: "alpha hover" } } },
+        "typescript-language-server": {
+          ok: true,
+          result: { contents: { value: "alpha hover" } },
+        },
         beta: { ok: true, result: { contents: { value: "beta hover" } } },
       },
     });
@@ -88,7 +91,7 @@ describe("end-to-end smoke tests", () => {
     });
 
     await expect(readFile(filePath, "utf8")).resolves.toBe("const value = 1;\n");
-    expect(preview.results.alpha).toMatchObject({
+    expect(preview.results["typescript-language-server"]).toMatchObject({
       ok: true,
       applied: false,
       message: "Edits were returned but not applied. Re-run with apply: true to modify files.",
@@ -102,7 +105,10 @@ describe("end-to-end smoke tests", () => {
     });
 
     await expect(readFile(filePath, "utf8")).resolves.toBe("const alphaFormatted = 1;\n");
-    expect(applied.results.alpha).toMatchObject({ ok: true, applied: true });
+    expect(applied.results["typescript-language-server"]).toMatchObject({
+      ok: true,
+      applied: true,
+    });
 
     const command = await callTool(registry, "execute_command", {
       workspaceRoot,
@@ -112,7 +118,7 @@ describe("end-to-end smoke tests", () => {
       arguments: [{ filePath }],
     });
 
-    expect(command.results.alpha).toMatchObject({
+    expect(command.results["typescript-language-server"]).toMatchObject({
       ok: true,
       result: {
         executed: { command: "source.fixAll.fake", arguments: [{ filePath }] },
@@ -130,7 +136,7 @@ describe("end-to-end smoke tests", () => {
       apply: true,
     });
 
-    expect(outsideEdit.results.alpha).toMatchObject({
+    expect(outsideEdit.results["typescript-language-server"]).toMatchObject({
       ok: false,
       error: expect.stringContaining("outside workspace root"),
     });

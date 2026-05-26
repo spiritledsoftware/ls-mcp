@@ -26,6 +26,7 @@ All config files are parsed with JSONC support, so comments and trailing commas 
     "servers": {
       "typescript": {
         "registry": "typescript",
+        "serverId": "workspace-typescript-language-server",
         "profile": "managed",
         "command": "typescript-language-server",
         "args": ["--stdio"],
@@ -60,7 +61,7 @@ All config files are parsed with JSONC support, so comments and trailing commas 
   "commands": {
     "enabled": true,
     "allow": {
-      "typescript": ["source.organizeImports.ts"],
+      "typescript-language-server": ["source.organizeImports.ts"],
     },
   },
 }
@@ -70,17 +71,18 @@ Unknown top-level keys are allowed but produce warnings. Nested config objects a
 
 ## LSP Servers
 
-Servers are configured under `lsp.servers`. The object key is the `serverId` used by tools and lifecycle commands.
+Servers are configured under `lsp.servers`. For custom servers, the object key is the canonical `serverId` unless `serverId` is set inside the server object. For registry-backed servers, the object key is a configured-ID alias and the built-in canonical language-server ID remains the public ID unless overridden.
 
-Built-in servers use canonical opencode IDs as their primary registry IDs: `astro`, `bash`, `clangd`, `clojure-lsp`, `csharp`, `dart`, `deno`, `elixir-ls`, `eslint`, `fsharp`, `gleam`, `gopls`, `hls`, `jdtls`, `json`, `julials`, `kotlin-ls`, `lua-ls`, `nixd`, `ocaml-lsp`, `oxlint`, `php intelephense`, `prisma`, `pyright`, `razor`, `ruby-lsp`, `rust`, `sourcekit-lsp`, `svelte`, `terraform`, `tinymist`, `typescript`, `vue`, `yaml-ls`, and `zls`.
+Built-in servers use recognizable language-server IDs as public canonical IDs, for example `typescript-language-server`, `vscode-json-language-server`, `vscode-eslint-language-server`, `pyright-langserver`, `gopls`, `rust-analyzer`, `yaml-language-server`, `svelte-language-server`, `intelephense`, and `julia-language-server`. Internal registry IDs such as `typescript`, `json`, `eslint`, `pyright`, `rust`, and `yaml-ls` are aliases for lookup and configuration.
 
-The `registry` field accepts canonical IDs and Mason/nvim-lspconfig aliases. Explicit tool and lifecycle `serverId` targeting also accepts those aliases when they resolve to a built-in server. Common aliases include `bashls` -> `bash`, `clojure_lsp` -> `clojure-lsp`, `denols` -> `deno`, `elixirls` -> `elixir-ls`, `fsautocomplete` -> `fsharp`, `lua_ls` -> `lua-ls`, `ocamllsp` -> `ocaml-lsp`, `intelephense` -> `php intelephense`, `prismals` -> `prisma`, `ruby_lsp` -> `ruby-lsp`, `rust_analyzer` -> `rust`, `terraformls` -> `terraform`, `ts_ls` -> `typescript`, `vue_ls` -> `vue`, and `yamlls` -> `yaml-ls`.
+The `registry` field accepts canonical IDs, internal registry IDs, and Mason/nvim-lspconfig aliases. Explicit tool and lifecycle `serverId` targeting also accepts those aliases when they resolve unambiguously. Common aliases include `bashls`, `clojure_lsp`, `denols`, `elixirls`, `fsautocomplete`, `lua_ls`, `ocamllsp`, `prismals`, `ruby_lsp`, `rust_analyzer`, `terraformls`, `ts_ls`, `vue_ls`, and `yamlls`.
 
-Compatibility aliases from earlier built-ins are also preserved: `go` -> `gopls`, `python` -> `pyright`, and `yaml` -> `yaml-ls`.
+Compatibility aliases from earlier built-ins are also preserved: `go` -> `gopls`, `python` -> `pyright-langserver`, and `yaml` -> `yaml-language-server`. Language IDs are aliases too, but they can be ambiguous; ambiguous aliases fail with structured suggestions and can be resolved with `search_servers`.
 
 Server options:
 
 - `registry`: built-in registry ID to inherit command, args, extensions, language IDs, and install behavior from.
+- `serverId`: optional public canonical ID override. When set, the config object key remains an alias.
 - `profile`: `managed` or `system`. `system` disables automatic install for built-ins and requires the command to be available manually.
 - `command`: explicit executable to run. When provided, it is used instead of registry command resolution and must exist on `PATH` or be an absolute executable path.
 - `args`: command arguments.
@@ -90,7 +92,7 @@ Server options:
 - `extensions`: file extensions matched by file-targeted tools. Values may include or omit the leading dot.
 - `initializationOptions`: value sent in the LSP `initialize` request.
 
-Configured servers override the built-in server with the same ID. If a configured server uses a `registry` that points to a built-in server, it also suppresses the default built-in definition for that registry ID to avoid duplicate tool execution.
+Configured servers override the built-in server with the same canonical ID. If a configured server uses a `registry` that points to a built-in server, it also suppresses the default built-in definition for that registry ID to avoid duplicate tool execution. Duplicate canonical IDs or aliases are rejected during server definition construction.
 
 Some built-ins have activation filters so optional or overlapping servers do not start for unrelated files. For example, `deno` requires `deno.json` or `deno.jsonc`, `eslint` requires an ESLint config marker, and `oxlint` requires an Oxlint config marker. Activation filtering affects automatic file matching; explicit `serverId` targeting still resolves known servers and reports normal command/install status.
 
@@ -156,7 +158,7 @@ When downloads are disabled, built-ins still work if their command is already in
 
 ## Commands Policy
 
-The raw `lsp_execute_command` tool and code actions that include commands call LSP `workspace/executeCommand`. Command execution is enabled by default.
+The raw `execute_command` tool and code actions that include commands call LSP `workspace/executeCommand`. Command execution is enabled by default.
 
 Disable all command execution:
 
@@ -174,13 +176,13 @@ Restrict commands for a server:
 {
   "commands": {
     "allow": {
-      "typescript": ["source.organizeImports.ts"],
+      "typescript-language-server": ["source.organizeImports.ts"],
     },
   },
 }
 ```
 
-If a server has no allowlist, all commands are allowed for that server unless `commands.enabled` is `false`. If a server has an allowlist, only listed command strings are allowed.
+If a server has no allowlist, all commands are allowed for that server unless `commands.enabled` is `false`. If a server has an allowlist, only listed command strings are allowed. Allowlist keys are normalized through the server identity resolver, so configured IDs and aliases such as `typescript` or `ts_ls` can be used when unambiguous, but enforcement happens by canonical server ID.
 
 ## Sessions
 
