@@ -1,18 +1,18 @@
 ---
 title: Project Snapshot
-summary: Project snapshot and execution directives for the lsp-mcp server, including current implementation status and planned work.
+summary: Project snapshot for nimble-wizard covering TypeScript MCP/LSP server structure, docs, tools, registry, security, and tests.
 tags: []
 related: [facts/project/project_snapshot.md, facts/project/plan_execution_directive.md, facts/project/curated_context_notes.md]
 keywords: []
 createdAt: '2026-05-24T11:01:08.890Z'
-updatedAt: '2026-05-24T18:27:47.831Z'
+updatedAt: '2026-05-25T20:38:16.984Z'
 ---
 ## Reason
-Curate project snapshot and planning directives from provided context
+Curate project snapshot and implementation context from RLM input
 
 ## Raw Concept
 **Task:**
-Document the current project snapshot and execution directives for the lsp-mcp repository
+Document the project snapshot and implementation context for nimble-wizard.
 
 **Changes:**
 - Identified the main source files and test file in the repository.
@@ -28,6 +28,8 @@ Document the current project snapshot and execution directives for the lsp-mcp r
 - Preserved plan execution directives and workflow rules
 - Recorded implementation observations about the working module and curation process
 - Captured the current project snapshot and plan directives
+- Captured the current repository structure and major implementation areas
+- Preserved the docs, scripts, source modules, and test suite layout
 
 **Files:**
 - src/mcp/server.ts
@@ -47,23 +49,31 @@ Document the current project snapshot and execution directives for the lsp-mcp r
 - src/lsp/methodRegistry.ts
 - src/lsp/transport.ts
 - src/lsp/stdioTransport.ts
+- docs/architecture.md
+- docs/config.md
+- docs/tools.md
+- src/lsp/
+- src/mcp/
+- src/registry/
+- src/security/
+- src/tools/
 
 **Flow:**
-project context -> snapshot -> execution directives -> implementation guidance
+project overview -> source modules -> tooling and registry -> tests
 
-**Timestamp:** 2026-05-24T18:27:41.799Z
+**Timestamp:** 2026-05-25T20:38:10.408Z
 
-**Author:** ByteRover context engineering
+**Author:** ByteRover context engine
 
 ## Narrative
 ### Structure
-The context describes the project snapshot and a directive-oriented plan for the lsp-mcp server.
+The repository centers on src/config, src/lsp, src/mcp, src/registry, src/security, src/tools, and supporting docs and tests.
 
 ### Dependencies
-References the project plan document as the source of current status and directives.
+The curated context references architecture, configuration, tool generation, registry installation, and integration tests as the main areas of concern.
 
 ### Highlights
-Captures the project state and execution guidance in a concise durable form.
+The project appears to be an MCP/LSP-oriented TypeScript service with dedicated docs plans and a substantial test suite.
 
 ### Rules
 Use RLM approach. Do not print raw context. Do not call tools.curation.recon when pre-computed. For chunked extraction use tools.curation.mapExtract(). Pass taskId as a bare variable, not a string. Any code_exec call containing mapExtract MUST use timeout: 300000 on the code_exec tool call itself. Use tools.curation.groupBySubject() and tools.curation.dedup() to organize extractions. Verify via result.applied[].filePath — do NOT call readFile for verification.
@@ -72,5 +82,4 @@ Use RLM approach. Do not print raw context. Do not call tools.curation.recon whe
 The curation workflow for this task is: extract facts, deduplicate them, group by subject, upsert durable context, then verify the applied file paths.
 
 ## Facts
-- **project_name**: The repository is lsp-mcp. [project]
-- **project_focus**: The current focus is an LSP MCP server implementation. [project]
+- **project_overview**: Project is a TypeScript-based MCP/LSP server named nimble-wizard with curated docs and tests [project]

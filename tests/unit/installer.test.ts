@@ -7,11 +7,40 @@ import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { builtInServers } from "../../src/registry/builtins.js";
+import type { BuiltInServerMetadata } from "../../src/registry/builtins.js";
 import { defaultCommandExists, resolveLspServerCommand } from "../../src/registry/installer.js";
+import { installGitHubServer } from "../../src/registry/githubInstaller.js";
 import { InstallLocks } from "../../src/registry/locks.js";
 import { installNpmServer } from "../../src/registry/npmInstaller.js";
 
 const tempDirs: string[] = [];
+const syntheticServerIds: string[] = [];
+
+function addSyntheticGitHubServer(id: string): BuiltInServerMetadata & {
+  installStrategy: Extract<BuiltInServerMetadata["installStrategy"], { type: "github" }>;
+} {
+  const metadata = {
+    id,
+    languages: ["example"],
+    languageIds: ["example"],
+    extensions: [".example"],
+    rootMarkers: ["example.json"],
+    command: "example-ls",
+    args: ["--stdio"],
+    installStrategy: {
+      type: "github",
+      repository: "owner/example-ls",
+      assetPattern: "example-ls-{version}-linux-x64.tar.gz",
+      binPath: "example-ls/bin/example-ls",
+    },
+    version: "1.2.3",
+    platforms: ["linux"],
+    aliases: [],
+  } satisfies BuiltInServerMetadata;
+  (builtInServers as Record<string, BuiltInServerMetadata>)[id] = metadata;
+  syntheticServerIds.push(id);
+  return metadata;
+}
 
 async function makeTempDir(): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "lsp-mcp-installer-"));
@@ -37,6 +66,9 @@ async function waitForPath(path: string): Promise<void> {
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  for (const serverId of syntheticServerIds.splice(0)) {
+    delete (builtInServers as Record<string, BuiltInServerMetadata>)[serverId];
+  }
   await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
@@ -229,6 +261,27 @@ describe("resolveLspServerCommand", () => {
     expect(install).not.toHaveBeenCalled();
   });
 
+  it("reports unsupported system-only servers with their server id", async () => {
+    const install = vi.fn();
+
+    const result = await resolveLspServerCommand({
+      serverId: "clangd",
+      server: { registry: "clangd" },
+      downloads: { enabled: true },
+      commandExists: async () => false,
+      installers: { npm: install },
+    });
+
+    expect(result).toEqual({
+      status: "not-installed",
+      reason:
+        "clangd is not available and automatic installation is not supported for clangd. Install it manually.",
+      command: "clangd",
+      args: [],
+    });
+    expect(install).not.toHaveBeenCalled();
+  });
+
   it("does not invent installs for missing user-defined commands", async () => {
     const install = vi.fn();
 
@@ -296,6 +349,71 @@ describe("resolveLspServerCommand", () => {
     expect(install).not.toHaveBeenCalled();
   });
 
+  it("does not treat cached GitHub archive binaries as supported installs", async () => {
+    const metadata = addSyntheticGitHubServer("example-github-ls");
+    const installDir = await makeTempDir();
+    const cachedCommand = join(installDir, metadata.installStrategy.binPath);
+    await mkdir(join(installDir, "example-ls", "bin"), { recursive: true });
+    await writeFile(cachedCommand, "", "utf8");
+    const install = vi.fn(async () => ({ command: "/should/not/run", args: ["--stdio"] }));
+
+    await expect(
+      resolveLspServerCommand({
+        serverId: metadata.id,
+        server: { registry: metadata.id },
+        downloads: { enabled: true },
+        commandExists: async () => false,
+        installers: { github: install },
+        installDir,
+      }),
+    ).rejects.toThrow(
+      "example-github-ls uses GitHub archive installation, which is not supported yet",
+    );
+    expect(install).not.toHaveBeenCalled();
+  });
+
+  it("reports GitHub archive installation as unsupported when installation is attempted", async () => {
+    const metadata = addSyntheticGitHubServer("example-github-repeat-ls");
+    const installDir = await makeTempDir();
+    const install = vi.fn(async () => ({ command: "/should/not/run", args: ["--stdio"] }));
+    const options = {
+      serverId: metadata.id,
+      server: { registry: metadata.id },
+      downloads: { enabled: true },
+      commandExists: async () => false,
+      installers: { github: install },
+      installDir,
+    };
+
+    await expect(resolveLspServerCommand(options)).rejects.toThrow(
+      "example-github-repeat-ls uses GitHub archive installation, which is not supported yet",
+    );
+    expect(install).not.toHaveBeenCalled();
+  });
+
+  it("does not invoke GitHub installer when downloads are disabled", async () => {
+    const metadata = addSyntheticGitHubServer("example-github-disabled-ls");
+    const install = vi.fn(async () => ({ command: "/should/not/run", args: ["--stdio"] }));
+
+    const result = await resolveLspServerCommand({
+      serverId: metadata.id,
+      server: { registry: metadata.id },
+      downloads: { enabled: false },
+      commandExists: async () => false,
+      installers: { github: install },
+      installDir: await makeTempDir(),
+    });
+
+    expect(result).toEqual({
+      status: "not-installed",
+      reason:
+        "example-ls is not available and downloads are disabled. Install it manually or enable downloads.",
+      command: "example-ls",
+      args: ["--stdio"],
+    });
+    expect(install).not.toHaveBeenCalled();
+  });
+
   it("default command lookup uses injected PATH", async () => {
     const dir = await makeTempDir();
     await writeFile(join(dir, "custom-ls"), "", "utf8");
@@ -335,8 +453,35 @@ describe("installNpmServer", () => {
     expect(result.command).toContain("typescript-language-server");
     expect(builtInServers.typescript.version).toBe("5.3.0");
     expect(builtInServers.json.version).toBe("4.10.0");
-    expect(builtInServers.yaml.version).toBe("1.23.0");
-    expect(builtInServers.python.version).toBe("1.1.409");
+    expect(builtInServers["yaml-ls"].version).toBe("1.23.0");
+    expect(builtInServers.pyright.version).toBe("1.1.409");
+  });
+});
+
+describe("installGitHubServer", () => {
+  it("fails clearly because GitHub archive installation is deferred", async () => {
+    const installDir = await makeTempDir();
+    const metadata = {
+      id: "example-ls",
+      languages: ["example"],
+      languageIds: ["example"],
+      extensions: [".example"],
+      rootMarkers: ["example.json"],
+      command: "example-ls",
+      args: ["--stdio"],
+      installStrategy: {
+        type: "github",
+        repository: "owner/example-ls",
+        assetPattern: "example-ls-{version}-linux-x64.tar.gz",
+        binPath: "example-ls/bin/example-ls",
+      },
+      version: "1.2.3",
+      platforms: ["linux"],
+      aliases: [],
+    } satisfies BuiltInServerMetadata;
+    await expect(installGitHubServer(metadata, { installDir })).rejects.toThrow(
+      "GitHub archive installation is not supported yet",
+    );
   });
 });
 

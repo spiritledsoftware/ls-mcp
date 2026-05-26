@@ -5,7 +5,6 @@ import { homedir } from "node:os";
 import type { LspMcpConfig } from "../config/schema.js";
 import { getBuiltInServer, type BuiltInServerMetadata } from "./builtins.js";
 import { InstallLocks } from "./locks.js";
-import { installGitHubServer } from "./githubInstaller.js";
 import { installNpmServer } from "./npmInstaller.js";
 
 export interface InstalledCommand {
@@ -88,7 +87,13 @@ function resolveInstallContext(
 function resolveCachedCommand(
   metadata: BuiltInServerMetadata,
   installDir: string,
-): InstalledCommand {
+): InstalledCommand | undefined {
+  if (metadata.installStrategy.type === "github") {
+    return undefined;
+  }
+  if (metadata.installStrategy.type !== "npm") {
+    return undefined;
+  }
   const binName = process.platform === "win32" ? `${metadata.command}.cmd` : metadata.command;
   return { command: join(installDir, "node_modules", ".bin", binName), args: metadata.args };
 }
@@ -152,10 +157,7 @@ async function installServer(
     );
   }
   if (strategy.type === "github") {
-    return (options.installers?.github ?? ((server) => installGitHubServer(server, context)))(
-      metadata,
-      context,
-    );
+    throw new Error(`${metadata.id} uses GitHub archive installation, which is not supported yet`);
   }
   throw new Error(`${metadata.id} does not support automatic installation`);
 }
@@ -242,11 +244,9 @@ async function resolveLspServerCommandInternal(
   }
 
   const context = resolveInstallContext(metadata, options);
-  if (metadata.installStrategy.type === "npm") {
-    const cached = resolveCachedCommand(metadata, context.installDir);
-    if (await fileExists(cached.command)) {
-      return { status: "ready", ...cached, source: "installed" };
-    }
+  const cached = resolveCachedCommand(metadata, context.installDir);
+  if (cached && (await fileExists(cached.command))) {
+    return { status: "ready", ...cached, source: "installed" };
   }
 
   if (!options.install) {
@@ -261,11 +261,9 @@ async function resolveLspServerCommandInternal(
   const lockRoot = context.lockRoot;
   const locks = options.locks ?? getDefaultInstallLocks(lockRoot);
   const installed = await locks.withLock(metadata.id, metadata.version, async () => {
-    if (metadata.installStrategy.type === "npm") {
-      const cached = resolveCachedCommand(metadata, context.installDir);
-      if (await fileExists(cached.command)) {
-        return cached;
-      }
+    const cached = resolveCachedCommand(metadata, context.installDir);
+    if (cached && (await fileExists(cached.command))) {
+      return cached;
     }
     return installServer(metadata, options);
   });

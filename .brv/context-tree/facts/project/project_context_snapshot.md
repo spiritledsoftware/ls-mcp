@@ -1,18 +1,18 @@
 ---
-title: Project Context Snapshot
-summary: Project context snapshot for lsp-mcp covering implementation details, plan execution, verification, and release readiness.
+title: project_context_snapshot
+summary: Snapshot of project knowledge extracted from the current context, including implementation details, tooling, schemas, and workflow notes.
 tags: []
 related: [facts/project/curated_context_notes.md, facts/project/lsp_mcp_server_implementation_details.md, facts/project/lsp_mcp_server_plan_execution.md, facts/project/verification_and_release_readiness.md]
 keywords: []
 createdAt: '2026-05-24T18:51:53.585Z'
-updatedAt: '2026-05-25T10:38:56.359Z'
+updatedAt: '2026-05-25T20:29:32.256Z'
 ---
 ## Reason
-Curate the current project context snapshot and plan execution notes
+Curate extracted project knowledge from RLM context
 
 ## Raw Concept
 **Task:**
-Capture the current project snapshot and the active curation focus for lsp-mcp.
+Project context snapshot and implementation notes
 
 **Changes:**
 - Recorded that curation uses the RLM approach
@@ -26,6 +26,11 @@ Capture the current project snapshot and the active curation focus for lsp-mcp.
 - Recorded the active documentation focus for implementation details, plan execution, verification, and release readiness
 - Captured the presence of key plan documents under docs/plans
 - Preserved the current runtime timestamp for temporal reference
+- Recorded the server stack and verified release readiness context
+- Captured the implemented LSP MCP server capability set
+- Preserved the preferred recon -> extraction -> curate apply workflow
+- Recorded the knowledge policy favoring durable facts over transient context
+- Captured source-derived project facts and conventions
 
 **Files:**
 - README.md
@@ -38,28 +43,26 @@ Capture the current project snapshot and the active curation focus for lsp-mcp.
 - src/tools/registerTools.ts
 - docs/plans/2026-05-25-ci-cd.md
 - docs/plans/lsp-mcp-server.md
+- docs/plans/2026-05-25-lsp-output-schemas.md
+- docs/plans/2026-05-25-mason-backed-lsp-registry.md
 
 **Flow:**
-project snapshot -> docs/plans review -> implementation details and execution notes -> verification and release readiness
+project notes -> extracted facts -> curated durable context
 
-**Timestamp:** 2026-05-25T10:38:46.473Z
+**Timestamp:** 2026-05-25T20:29:21.821Z
 
 **Author:** ByteRover context engineer
 
 ## Narrative
 ### Structure
-This snapshot summarizes the project-level curation context and points to the plans area where active documentation lives.
-
-### Dependencies
-The knowledge depends on the current working repository state and the plan documents in docs/plans.
+This snapshot consolidates plan outcomes, implementation details, and operational notes relevant to the project.
 
 ### Highlights
-The active knowledge area is centered on lsp-mcp implementation details, plan execution, verification, and release readiness.
+Preserves CI/CD planning, LSP output schema generation, mason-backed registry behavior, and related verification notes.
+
+### Rules
+Project knowledge favors lasting-value facts, decisions, technical details, preferences, and notable outcomes over transient context.
+Docs/plans workflow follows recon -> extraction -> curate apply for converting context into lasting facts.
 
 ### Examples
 Use this file as the main durable summary when reasoning about the project at a high level.
-
-## Facts
-- **project_focus**: The project is lsp-mcp and the current work focuses on documenting its implementation details, plan execution, verification, and release readiness. [project]
-- **docs_plans**: The repository contains docs/plans with at least two plan documents: 2026-05-25-ci-cd.md and lsp-mcp-server.md. [project]
-- **runtime_timestamp**: The current runtime timestamp captured in the context is 2026-05-25T10:38:46.473Z. [environment]

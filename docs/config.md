@@ -72,6 +72,12 @@ Unknown top-level keys are allowed but produce warnings. Nested config objects a
 
 Servers are configured under `lsp.servers`. The object key is the `serverId` used by tools and lifecycle commands.
 
+Built-in servers use canonical opencode IDs as their primary registry IDs: `astro`, `bash`, `clangd`, `clojure-lsp`, `csharp`, `dart`, `deno`, `elixir-ls`, `eslint`, `fsharp`, `gleam`, `gopls`, `hls`, `jdtls`, `json`, `julials`, `kotlin-ls`, `lua-ls`, `nixd`, `ocaml-lsp`, `oxlint`, `php intelephense`, `prisma`, `pyright`, `razor`, `ruby-lsp`, `rust`, `sourcekit-lsp`, `svelte`, `terraform`, `tinymist`, `typescript`, `vue`, `yaml-ls`, and `zls`.
+
+The `registry` field accepts canonical IDs and Mason/nvim-lspconfig aliases. Explicit tool and lifecycle `serverId` targeting also accepts those aliases when they resolve to a built-in server. Common aliases include `bashls` -> `bash`, `clojure_lsp` -> `clojure-lsp`, `denols` -> `deno`, `elixirls` -> `elixir-ls`, `fsautocomplete` -> `fsharp`, `lua_ls` -> `lua-ls`, `ocamllsp` -> `ocaml-lsp`, `intelephense` -> `php intelephense`, `prismals` -> `prisma`, `ruby_lsp` -> `ruby-lsp`, `rust_analyzer` -> `rust`, `terraformls` -> `terraform`, `ts_ls` -> `typescript`, `vue_ls` -> `vue`, and `yamlls` -> `yaml-ls`.
+
+Compatibility aliases from earlier built-ins are also preserved: `go` -> `gopls`, `python` -> `pyright`, and `yaml` -> `yaml-ls`.
+
 Server options:
 
 - `registry`: built-in registry ID to inherit command, args, extensions, language IDs, and install behavior from.
@@ -85,6 +91,8 @@ Server options:
 - `initializationOptions`: value sent in the LSP `initialize` request.
 
 Configured servers override the built-in server with the same ID. If a configured server uses a `registry` that points to a built-in server, it also suppresses the default built-in definition for that registry ID to avoid duplicate tool execution.
+
+Some built-ins have activation filters so optional or overlapping servers do not start for unrelated files. For example, `deno` requires `deno.json` or `deno.jsonc`, `eslint` requires an ESLint config marker, and `oxlint` requires an Oxlint config marker. Activation filtering affects automatic file matching; explicit `serverId` targeting still resolves known servers and reports normal command/install status.
 
 ### Biome Example
 
@@ -121,7 +129,9 @@ The command must already be installed and visible to the MCP server process.
 
 ## Lazy Managed Downloads
 
-Built-in servers with npm or GitHub install strategies can be installed lazily. On first use, command resolution checks in this order:
+Built-in servers with supported install strategies can be installed lazily. Mason package metadata is vendored in the package as a generated snapshot; `lsp-mcp` does not fetch the Mason registry at runtime. The snapshot is used for deterministic upstream metadata and aliases, while the hand-authored built-in overlay controls canonical IDs, commands, args, activation rules, root markers, and install policy.
+
+On first use, command resolution checks in this order:
 
 1. A configured `command`, if present.
 2. A system command matching the built-in metadata.
@@ -129,6 +139,8 @@ Built-in servers with npm or GitHub install strategies can be installed lazily. 
 4. A new managed install, if downloads are enabled and the install strategy supports it.
 
 The cache root is `$XDG_CACHE_HOME/lsp-mcp` or `~/.cache/lsp-mcp`. npm-backed servers are cached under `servers/<registryId>` with lock files under `install-locks` to serialize concurrent installs.
+
+Managed downloads are pinned and limited to built-ins whose install strategy is explicitly supported, such as npm-backed language servers and selected deterministic archive downloads. Built-ins marked as system-only are never downloaded automatically; install the command yourself or provide an explicit `command` in config.
 
 Disable managed downloads globally:
 

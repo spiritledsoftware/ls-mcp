@@ -83,7 +83,11 @@ Build and start the MCP server through your MCP host. Then call an LSP tool such
 
 For file-targeted tools, `serverId` is optional. If omitted, the tool runs against every configured or built-in server whose language IDs or file extensions match the target file. Add `"serverId": "typescript"` to target one server.
 
-Built-in registry IDs currently include `typescript`, `json`, `yaml`, `python`, `rust`, `go`, and `clangd`. Managed downloads are available only for built-ins whose install strategy supports them, currently npm-backed built-ins such as TypeScript, JSON, YAML, and Python.
+Built-in registry coverage follows opencode's documented LSP server set, plus the existing `json` built-in. Canonical built-in IDs include `astro`, `bash`, `clangd`, `clojure-lsp`, `csharp`, `dart`, `deno`, `elixir-ls`, `eslint`, `fsharp`, `gleam`, `gopls`, `hls`, `jdtls`, `json`, `julials`, `kotlin-ls`, `lua-ls`, `nixd`, `ocaml-lsp`, `oxlint`, `php intelephense`, `prisma`, `pyright`, `razor`, `ruby-lsp`, `rust`, `sourcekit-lsp`, `svelte`, `terraform`, `tinymist`, `typescript`, `vue`, `yaml-ls`, and `zls`.
+
+The built-in registry also accepts Mason and nvim-lspconfig aliases where available, such as `bashls`, `clojure_lsp`, `denols`, `elixirls`, `fsautocomplete`, `lua_ls`, `ocamllsp`, `intelephense`, `prismals`, `ruby_lsp`, `rust_analyzer`, `terraformls`, `ts_ls`, `vue_ls`, and `yamlls`. Compatibility aliases `go`, `python`, and `yaml` continue to resolve to `gopls`, `pyright`, and `yaml-ls`.
+
+Mason data is vendored as a generated snapshot and never fetched at runtime, so built-in metadata and aliases are deterministic and offline. Managed downloads are available only for built-ins with supported pinned install strategies; other built-ins use system commands or explicit configured commands.
 
 ## Development
 

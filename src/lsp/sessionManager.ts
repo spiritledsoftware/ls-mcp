@@ -1,4 +1,5 @@
-import { extname, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { extname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { LspMcpConfig } from "../config/schema.js";
@@ -110,6 +111,8 @@ export interface LspServerDefinitionStatus {
   extensions: readonly string[];
   installStrategy?: string;
   version?: string;
+  aliases: readonly string[];
+  upstream?: BuiltInServerMetadata["upstream"];
   running: boolean;
   server: ConfiguredServer;
   downloads?: DownloadsConfig;
@@ -254,6 +257,8 @@ export class LspSessionManager {
       extensions: definition.extensions,
       installStrategy: definition.metadata?.installStrategy.type,
       version: definition.metadata?.version,
+      aliases: definition.metadata?.aliases ?? [],
+      upstream: definition.metadata?.upstream,
       running: this.hasRunningSession(definition.id),
       server: definition.server,
       downloads: this.config.downloads,
@@ -287,6 +292,8 @@ export class LspSessionManager {
       extensions: definition.extensions,
       installStrategy: definition.metadata?.installStrategy.type,
       version: definition.metadata?.version,
+      aliases: definition.metadata?.aliases ?? [],
+      upstream: definition.metadata?.upstream,
       running: this.sessions.has(sessionKey(normalizedRoot, definition.id)),
       server: definition.server,
       downloads: this.config.downloads,
@@ -297,9 +304,10 @@ export class LspSessionManager {
     options: { workspaceRoot?: string; serverId?: string } = {},
   ): LspActiveSessionStatus[] {
     const workspaceRoot = options.workspaceRoot ? resolve(options.workspaceRoot) : undefined;
+    const serverId = options.serverId ? this.resolveServerId(options.serverId) : undefined;
     return [...this.sessions.values()]
       .filter((active) => !workspaceRoot || active.workspaceRoot === workspaceRoot)
-      .filter((active) => !options.serverId || active.serverId === options.serverId)
+      .filter((active) => !serverId || active.serverId === serverId)
       .map((active) => ({
         serverId: active.serverId,
         workspaceRoot: active.workspaceRoot,
@@ -313,7 +321,7 @@ export class LspSessionManager {
   }
 
   async stopServer(options: { workspaceRoot: string; serverId: string }): Promise<boolean> {
-    const key = sessionKey(resolve(options.workspaceRoot), options.serverId);
+    const key = sessionKey(resolve(options.workspaceRoot), this.resolveServerId(options.serverId));
     const starting = this.starting.get(key);
     if (starting) {
       const active = await starting.catch(() => undefined);
@@ -358,7 +366,7 @@ export class LspSessionManager {
   private resolveMatchingServers(options: GetSessionsForFileOptions): ServerDefinition[] {
     const definitions = this.getServerDefinitions();
     if (options.serverId) {
-      const definition = definitions.find((server) => server.id === options.serverId);
+      const definition = this.resolveServerDefinition(definitions, options.serverId);
       if (!definition) {
         throw new Error(`Unknown LSP server ${options.serverId}`);
       }
@@ -377,6 +385,7 @@ export class LspSessionManager {
     for (const definition of definitions) {
       if (
         !matchesTarget(definition, options.filePath, options.languageId) ||
+        !activationApplies(definition, options.workspaceRoot) ||
         seen.has(definition.dedupeId)
       ) {
         continue;
@@ -390,7 +399,7 @@ export class LspSessionManager {
   private resolveWorkspaceServers(serverId?: string): ServerDefinition[] {
     const definitions = this.getServerDefinitions();
     if (serverId) {
-      const definition = definitions.find((server) => server.id === serverId);
+      const definition = this.resolveServerDefinition(definitions, serverId);
       if (!definition) {
         throw new Error(`Unknown LSP server ${serverId}`);
       }
@@ -430,6 +439,20 @@ export class LspSessionManager {
     }
 
     return definitions;
+  }
+
+  private resolveServerId(serverId: string): string {
+    return this.resolveServerDefinition(this.getServerDefinitions(), serverId)?.id ?? serverId;
+  }
+
+  private resolveServerDefinition(
+    definitions: readonly ServerDefinition[],
+    serverId: string,
+  ): ServerDefinition | undefined {
+    const canonicalId = getBuiltInServer(serverId)?.id ?? serverId;
+    return definitions.find(
+      (definition) => definition.id === serverId || definition.metadata?.id === canonicalId,
+    );
   }
 
   private async acquireSession(
@@ -609,6 +632,19 @@ function matchesTarget(
 
 function hasMatchCriteria(definition: ServerDefinition): boolean {
   return definition.extensions.length > 0 || definition.languageIds.length > 0;
+}
+
+function activationApplies(definition: ServerDefinition, workspaceRoot: string): boolean {
+  const requiredRootMarkers = definition.metadata?.activation?.requiredRootMarkers;
+  return (
+    (!requiredRootMarkers?.length ||
+      requiredRootMarkers.some((marker) => existsSync(join(workspaceRoot, marker)))) &&
+    !hasAnyRootMarker(definition.metadata?.activation?.excludedRootMarkers, workspaceRoot)
+  );
+}
+
+function hasAnyRootMarker(markers: readonly string[] | undefined, workspaceRoot: string): boolean {
+  return Boolean(markers?.some((marker) => existsSync(join(workspaceRoot, marker))));
 }
 
 function sessionKey(workspaceRoot: string, serverId: string): string {

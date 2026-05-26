@@ -100,7 +100,7 @@ describe("server lifecycle tools", () => {
     expect(factory).not.toHaveBeenCalled();
     expect(result).toMatchObject({ ok: true });
     expect(result.servers.map((server: { id: string }) => server.id)).toEqual(
-      expect.arrayContaining(["ts", "custom", "json", "python"]),
+      expect.arrayContaining(["ts", "custom", "json", "pyright"]),
     );
     expect(result.servers.find((server: { id: string }) => server.id === "ts")).toMatchObject({
       id: "ts",

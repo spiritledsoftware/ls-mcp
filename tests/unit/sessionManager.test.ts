@@ -1,4 +1,6 @@
-import { basename } from "node:path";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -15,16 +17,16 @@ interface StartedSession extends ManagedLspSession {
 function createManager(options: ConstructorParameters<typeof LspSessionManager>[0] = {}) {
   const sessions: StartedSession[] = [];
   const { config: optionConfig, ...managerOptions } = options;
+  const configuredServers = optionConfig?.lsp?.servers ?? {
+    ts: { registry: "typescript", command: "ts-ls", args: ["--stdio"] },
+    json: { registry: "json", command: "json-ls" },
+  };
   const manager = new LspSessionManager({
     config: {
       ...optionConfig,
       lsp: {
         ...optionConfig?.lsp,
-        servers: {
-          ts: { registry: "typescript", command: "ts-ls", args: ["--stdio"] },
-          json: { registry: "json", command: "json-ls" },
-          ...optionConfig?.lsp?.servers,
-        },
+        servers: configuredServers,
       },
     },
     commandResolver:
@@ -155,6 +157,155 @@ describe("LspSessionManager", () => {
     });
 
     expect(result.map((session) => session.serverId)).toEqual(["json"]);
+  });
+
+  it("resolves explicit compatibility alias serverId for file sessions", async () => {
+    const { manager } = createManager({ config: { lsp: { servers: {} } } });
+
+    const result = await manager.getSessionsForFile({
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/main.py",
+      serverId: "python",
+    });
+
+    expect(result.map((session) => session.serverId)).toEqual(["pyright"]);
+  });
+
+  it("resolves explicit compatibility alias serverId for workspace sessions", async () => {
+    const { manager } = createManager({ config: { lsp: { servers: {} } } });
+
+    const result = await manager.getSessionsForWorkspace({
+      workspaceRoot: "/workspace",
+      serverId: "yaml",
+    });
+
+    expect(result.map((session) => session.serverId)).toEqual(["yaml-ls"]);
+  });
+
+  it("resolves explicit Mason alias serverId to configured canonical equivalent", async () => {
+    const { manager } = createManager();
+
+    const result = await manager.getSessionsForFile({
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/src/app.ts",
+      serverId: "ts_ls",
+    });
+
+    expect(result.map((session) => session.serverId)).toEqual(["ts"]);
+  });
+
+  it("resolves explicit alias serverId for status listing", () => {
+    const { manager } = createManager({ config: { lsp: { servers: {} } } });
+
+    expect(
+      manager
+        .listServerStatuses({ workspaceRoot: "/workspace", serverId: "python" })
+        .map((server) => server.id),
+    ).toEqual(["pyright"]);
+  });
+
+  it("stops canonical active sessions by alias serverId", async () => {
+    const { manager, sessions } = createManager({ config: { lsp: { servers: {} } } });
+    await manager.getSessionsForFile({
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/main.py",
+      serverId: "pyright",
+    });
+
+    await expect(
+      manager.stopServer({ workspaceRoot: "/workspace", serverId: "python" }),
+    ).resolves.toBe(true);
+
+    expect(sessions[0]?.shutdowns).toBe(1);
+    expect(manager.listActiveSessions({ workspaceRoot: "/workspace" })).toEqual([]);
+  });
+
+  it("dedupes configured registry aliases with canonical built-ins in status and listing", () => {
+    const { manager } = createManager({
+      config: {
+        lsp: {
+          servers: {
+            yamlAlias: { registry: "yamlls", command: "yaml-ls" },
+          },
+        },
+      },
+    });
+
+    expect(manager.listServers().filter((server) => server.registryId === "yaml-ls")).toEqual([
+      expect.objectContaining({ id: "yamlAlias", registryId: "yaml-ls" }),
+    ]);
+    expect(
+      manager
+        .listServerStatuses({ workspaceRoot: "/workspace", filePath: "/workspace/config.yaml" })
+        .map((server) => server.id),
+    ).toEqual(["yamlAlias"]);
+  });
+
+  it("filters Deno activation for TypeScript files unless a Deno marker exists", async () => {
+    const workspaceRoot = await mkdtemp(join(tmpdir(), "lsp-mcp-deno-"));
+    try {
+      const { manager } = createManager({ config: { lsp: { servers: {} } } });
+      const filePath = join(workspaceRoot, "mod.ts");
+      await writeFile(filePath, "export const value = 1;\n");
+
+      expect(
+        manager
+          .listServerStatuses({ workspaceRoot, filePath })
+          .map((server) => server.registryId ?? server.id),
+      ).toContain("typescript");
+      expect(
+        manager
+          .listServerStatuses({ workspaceRoot, filePath })
+          .map((server) => server.registryId ?? server.id),
+      ).not.toContain("deno");
+
+      await writeFile(join(workspaceRoot, "deno.json"), "{}\n");
+
+      expect(
+        manager
+          .listServerStatuses({ workspaceRoot, filePath })
+          .map((server) => server.registryId ?? server.id),
+      ).toContain("deno");
+      expect(
+        manager
+          .listServerStatuses({ workspaceRoot, filePath })
+          .map((server) => server.registryId ?? server.id),
+      ).not.toContain("typescript");
+    } finally {
+      await rm(workspaceRoot, { force: true, recursive: true });
+    }
+  });
+
+  it("allows explicit TypeScript targeting inside Deno workspaces", async () => {
+    const workspaceRoot = await mkdtemp(join(tmpdir(), "lsp-mcp-deno-"));
+    try {
+      const { manager } = createManager({ config: { lsp: { servers: {} } } });
+      const filePath = join(workspaceRoot, "mod.ts");
+      await writeFile(filePath, "export const value = 1;\n");
+      await writeFile(join(workspaceRoot, "deno.json"), "{}\n");
+
+      const result = await manager.getSessionsForFile({
+        workspaceRoot,
+        filePath,
+        serverId: "typescript",
+      });
+
+      expect(result.map((session) => session.serverId)).toEqual(["typescript"]);
+    } finally {
+      await rm(workspaceRoot, { force: true, recursive: true });
+    }
+  });
+
+  it("exposes aliases and upstream metadata in server statuses", () => {
+    const { manager } = createManager({ config: { lsp: { servers: {} } } });
+
+    expect(
+      manager.listServerStatuses({ workspaceRoot: "/workspace", serverId: "ts_ls" })[0],
+    ).toMatchObject({
+      id: "typescript",
+      aliases: expect.arrayContaining(["ts_ls"]),
+      upstream: expect.objectContaining({ mason: expect.any(Object) }),
+    });
   });
 
   it("starts only the provided serverId when multiple servers match", async () => {
