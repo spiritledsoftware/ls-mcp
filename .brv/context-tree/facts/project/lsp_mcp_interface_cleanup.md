@@ -1,18 +1,18 @@
 ---
 title: LSP MCP Interface Cleanup
-summary: Documents the LSP MCP interface cleanup work, including CLI/MCP consolidation, command policy handling, tool registration behavior, and verification outcomes.
+summary: LSP MCP interface cleanup work covering tool naming consistency, output schema handling, server discovery, and verification updates.
 tags: []
 related: []
 keywords: []
 createdAt: '2026-05-26T14:39:23.671Z'
-updatedAt: '2026-05-26T14:55:55.578Z'
+updatedAt: '2026-05-26T22:44:47.552Z'
 ---
 ## Reason
-Curate project guidance about cleaning up the LSP MCP interface and related implementation details
+Curate RLM context about cleanup of the LSP MCP interface and related tooling
 
 ## Raw Concept
 **Task:**
-Document the LSP MCP interface cleanup effort and its implementation notes.
+Document the LSP MCP interface cleanup work captured in the curated context.
 
 **Changes:**
 - Standardize tool naming and method wiring
@@ -20,24 +20,26 @@ Document the LSP MCP interface cleanup effort and its implementation notes.
 - Record cleanup and implementation notes in durable knowledge
 - Captured interface cleanup guidance
 - Recorded implementation details and verification outcomes
+- Captured cleanup-related implementation and review notes
+- Recorded interface, schema, discovery, and verification concerns
 
 **Flow:**
-identify interface cleanup concerns -> document implementation details -> verify readiness
+cleanup work -> review findings -> verification updates -> curated knowledge
 
-**Timestamp:** 2026-05-26
+**Timestamp:** 2026-05-26T22:44:41.174Z
 
 **Author:** ByteRover context engineer
 
 ## Narrative
 ### Structure
-This knowledge entry captures the interface cleanup task and the related implementation/verification notes.
+The knowledge captures a compact project-facing record of interface cleanup efforts for the LSP MCP codebase.
 
 ### Dependencies
-Relates to LSP server implementation, MCP server behavior, tool registration, and command policy handling.
+This context is tied to review, tooling, schema, and verification materials in the project tree.
 
 ### Highlights
-Preserves the cleanup scope and the associated project notes for future recall.
+The preserved knowledge is intended to support future recall of interface cleanup decisions and associated implementation notes.
 
 ## Facts
-- **lsp_mcp_interface_cleanup**: The project has a cleanup task focused on the LSP MCP interface. [project]
-- **lsp_mcp_interface_boundaries**: The cleanup work involves consolidating or clarifying LSP and MCP interface boundaries. [project]
+- **lsp_mcp_interface_cleanup**: The context documents cleanup work for the LSP MCP interface. [project]
+- **lsp_mcp_interface_cleanup_scope**: The project includes tool naming, output schema handling, server discovery, and verification updates. [project]
