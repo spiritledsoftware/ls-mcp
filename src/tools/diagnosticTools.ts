@@ -283,10 +283,7 @@ function isMethodUnhandledError(error: unknown): boolean {
     return false;
   }
   return (
-    error.code === -32601 ||
-    error.code === "MethodNotFound" ||
-    error.code === "METHOD_NOT_FOUND" ||
-    (error instanceof Error && /unhandled|method not found/i.test(error.message))
+    error.code === -32601 || error.code === "MethodNotFound" || error.code === "METHOD_NOT_FOUND"
   );
 }
 

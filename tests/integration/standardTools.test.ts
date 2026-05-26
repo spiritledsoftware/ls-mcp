@@ -1013,6 +1013,34 @@ describe("standard tool forwarding", () => {
     });
   });
 
+  it("returns serializable completion metadata for completion item arrays", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const items = Array.from({ length: 101 }, (_, index) => ({ label: `global${index}` }));
+    const session = createSession(
+      { "textDocument/completion": items },
+      { completionProvider: true },
+    );
+    const handler = createStandardToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        getSessionsForWorkspace: vi.fn(async () => []),
+      },
+      documentStore: new DocumentStore(),
+    });
+
+    const result = await handler("completion", { workspaceRoot, filePath, line: 1, character: 1 });
+    const serialized = JSON.parse(JSON.stringify(result)) as typeof result;
+
+    expect(serialized.results.ts).toMatchObject({
+      ok: true,
+      result: {
+        isIncomplete: false,
+        items: expect.any(Array),
+        lspMcpMeta: { totalItems: 101, returnedItems: 100, truncated: true },
+      },
+    });
+  });
+
   it("requires serverId for server-specific resolve and hierarchy item methods", async () => {
     const { workspaceRoot } = await createWorkspaceFile();
     const session = createSession({}, { completionProvider: { resolveProvider: true } });

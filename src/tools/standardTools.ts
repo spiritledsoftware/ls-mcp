@@ -283,12 +283,11 @@ function completionLimit(value: unknown): number {
 function limitCompletionResult(result: unknown, query: string | undefined, limit: number): unknown {
   if (Array.isArray(result)) {
     const filteredItems = filterCompletionItems(result, query);
-    return withCompletionMeta(
-      filteredItems.slice(0, limit),
-      result.length,
-      filteredItems.length,
-      limit,
-    );
+    return {
+      isIncomplete: false,
+      items: filteredItems.slice(0, limit),
+      lspMcpMeta: completionMeta(result.length, filteredItems.length, limit),
+    };
   }
   if (!isRecord(result) || !Array.isArray(result.items)) {
     return result;
@@ -299,15 +298,6 @@ function limitCompletionResult(result: unknown, query: string | undefined, limit
     items: filteredItems.slice(0, limit),
     lspMcpMeta: completionMeta(result.items.length, filteredItems.length, limit),
   };
-}
-
-function withCompletionMeta(
-  items: unknown[],
-  totalItems: number,
-  matchedItems: number,
-  limit: number,
-): unknown[] & { lspMcpMeta?: ReturnType<typeof completionMeta> } {
-  return Object.assign(items, { lspMcpMeta: completionMeta(totalItems, matchedItems, limit) });
 }
 
 function completionMeta(totalItems: number, matchedItems: number, limit: number) {

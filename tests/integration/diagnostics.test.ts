@@ -263,6 +263,27 @@ describe("diagnostics", () => {
     });
   });
 
+  it("does not fallback when pull diagnostics fail with an internal unhandled error", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const session = createSession({
+      capabilities: { diagnosticProvider: true },
+      requestErrors: {
+        "textDocument/diagnostic": Object.assign(new Error("Unhandled exception in server"), {
+          code: -32603,
+        }),
+      },
+    });
+    const handler = createHandler([acquired("ts", session, workspaceRoot)], 5);
+
+    const result = await handler({ workspaceRoot, filePath });
+
+    expect(result.results.ts).toMatchObject({
+      ok: false,
+      error: "Unhandled exception in server",
+      code: -32603,
+    });
+  });
+
   it("preserves structured timeout errors", async () => {
     const { workspaceRoot, filePath } = await createWorkspaceFile();
     const session = createSession({
