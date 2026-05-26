@@ -961,6 +961,58 @@ describe("standard tool forwarding", () => {
     });
   });
 
+  it("limits completion results by default and supports filtering", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const items = Array.from({ length: 120 }, (_, index) => ({
+      label: index === 119 ? "goalPlugin" : `global${index}`,
+      detail: index === 119 ? "exported plugin" : "global symbol",
+    }));
+    const session = createSession(
+      { "textDocument/completion": { isIncomplete: false, items } },
+      { completionProvider: true },
+    );
+    const handler = createStandardToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        getSessionsForWorkspace: vi.fn(async () => []),
+      },
+      documentStore: new DocumentStore(),
+    });
+
+    const defaultResult = await handler("completion", {
+      workspaceRoot,
+      filePath,
+      line: 1,
+      character: 1,
+    });
+    const filteredResult = await handler("completion", {
+      workspaceRoot,
+      filePath,
+      line: 1,
+      character: 1,
+      query: "goal",
+    });
+
+    expect(defaultResult.results.ts).toMatchObject({
+      ok: true,
+      result: {
+        isIncomplete: false,
+        items: expect.any(Array),
+        lspMcpMeta: { totalItems: 120, returnedItems: 100, truncated: true },
+      },
+    });
+    expect(
+      (defaultResult.results.ts as { ok: true; result: { items: unknown[] } }).result.items,
+    ).toHaveLength(100);
+    expect(filteredResult.results.ts).toMatchObject({
+      ok: true,
+      result: {
+        items: [{ label: "goalPlugin", detail: "exported plugin" }],
+        lspMcpMeta: { totalItems: 120, matchedItems: 1, returnedItems: 1, truncated: false },
+      },
+    });
+  });
+
   it("requires serverId for server-specific resolve and hierarchy item methods", async () => {
     const { workspaceRoot } = await createWorkspaceFile();
     const session = createSession({}, { completionProvider: { resolveProvider: true } });

@@ -350,12 +350,10 @@ function editOutputSchema(extraSuccessFields: z.ZodType): z.ZodType {
             }),
           )
           .and(extraSuccessFields),
-        structuredErrorSchema.and(
-          z.object({
-            applied: z.boolean().optional(),
-            changedFiles: z.array(changedFileSchema).optional(),
-          }),
-        ),
+        structuredErrorSchema.extend({
+          applied: z.boolean().optional(),
+          changedFiles: z.array(changedFileSchema).optional(),
+        }),
       ]),
     ),
     error: z.string().optional(),

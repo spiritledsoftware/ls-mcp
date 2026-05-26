@@ -191,35 +191,29 @@ async function collectFileDiagnostics(
     serverExtensions: acquired.extensions,
   });
   if (acquired.session.capabilities?.diagnosticProvider) {
-    const response = await acquired.session.sendRequest(
-      "textDocument/diagnostic",
-      {
-        textDocument: { uri },
-      },
-      { signal: context?.signal },
-    );
-    return {
-      ok: true,
-      mode: "pull",
-      uri,
-      filePath,
-      diagnostics: normalizeDiagnostics(extractPullDiagnostics(response), uri),
-    };
+    try {
+      const response = await acquired.session.sendRequest(
+        "textDocument/diagnostic",
+        {
+          textDocument: { uri },
+        },
+        { signal: context?.signal },
+      );
+      return {
+        ok: true,
+        mode: "pull",
+        uri,
+        filePath,
+        diagnostics: normalizeDiagnostics(extractPullDiagnostics(response), uri),
+      };
+    } catch (error) {
+      if (!isMethodUnhandledError(error)) {
+        throw error;
+      }
+    }
   }
 
-  const cached = options.diagnosticStore.get(acquired.serverId, uri);
-  if (cached) {
-    return pushResult("push-cache", cached.uri, cached.diagnostics);
-  }
-
-  const waited = await options.diagnosticStore.waitFor(
-    acquired.serverId,
-    uri,
-    options.diagnosticsWaitMs ??
-      options.config?.sessions?.diagnosticsWaitMs ??
-      DEFAULT_DIAGNOSTICS_WAIT_MS,
-  );
-  return pushResult("push-wait", uri, waited?.diagnostics ?? []);
+  return collectPushDiagnostics(options, acquired.serverId, uri);
 }
 
 async function collectWorkspaceDiagnostics(
@@ -243,6 +237,26 @@ async function collectWorkspaceDiagnostics(
   };
 }
 
+async function collectPushDiagnostics(
+  options: DiagnosticsToolHandlerOptions,
+  serverId: string,
+  uri: string,
+): Promise<DiagnosticsToolServerSuccess> {
+  const cached = options.diagnosticStore.get(serverId, uri);
+  if (cached) {
+    return pushResult("push-cache", cached.uri, cached.diagnostics);
+  }
+
+  const waited = await options.diagnosticStore.waitFor(
+    serverId,
+    uri,
+    options.diagnosticsWaitMs ??
+      options.config?.sessions?.diagnosticsWaitMs ??
+      DEFAULT_DIAGNOSTICS_WAIT_MS,
+  );
+  return pushResult("push-wait", uri, waited?.diagnostics ?? []);
+}
+
 function pushResult(
   mode: "push-cache" | "push-wait",
   uri: string,
@@ -262,6 +276,18 @@ function extractPullDiagnostics(response: unknown): unknown[] {
     return response.items;
   }
   return [];
+}
+
+function isMethodUnhandledError(error: unknown): boolean {
+  if (!isRecord(error)) {
+    return false;
+  }
+  return (
+    error.code === -32601 ||
+    error.code === "MethodNotFound" ||
+    error.code === "METHOD_NOT_FOUND" ||
+    (error instanceof Error && /unhandled|method not found/i.test(error.message))
+  );
 }
 
 function normalizeWorkspaceDiagnostics(response: unknown): unknown[] {

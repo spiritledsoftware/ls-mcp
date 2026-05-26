@@ -1,18 +1,18 @@
 ---
 title: RLM Curation Workflow Guidance
-summary: RLM curation workflow guidance covering recon, single-pass handling, mapExtract timeouts, and verification rules.
+summary: RLM curation uses single-pass processing when suggested, prefers UPSERT, and verifies applied file paths rather than rereading files.
 tags: []
 related: []
 keywords: []
 createdAt: '2026-05-26T10:51:08.735Z'
-updatedAt: '2026-05-26T14:26:07.876Z'
+updatedAt: '2026-05-26T19:32:46.985Z'
 ---
 ## Reason
-Capture curation workflow guidance and verification rules from the provided context.
+Curate the current RLM curation instructions and verification conventions from the provided context
 
 ## Raw Concept
 **Task:**
-Document the RLM curation workflow guidance for context-driven knowledge curation.
+Curate the provided context using the RLM approach
 
 **Changes:**
 - Use precomputed recon results when available
@@ -23,31 +23,36 @@ Document the RLM curation workflow guidance for context-driven knowledge curatio
 - Confirmed single-pass processing for the current context.
 - Captured the no-rerun recon rule for precomputed contexts.
 - Captured the mapExtract timeout requirement and verification rule.
+- Use single-pass RLM processing when recon suggests single-pass
+- Prefer UPSERT for curation operations
+- Verify curation through result.applied[].filePath
+
+**Files:**
+- .brv/context-tree/facts/conventions/context.md
 
 **Flow:**
-recon precomputed -> extract context -> curate knowledge -> verify applied file paths
+recon already computed -> extract key facts -> dedup/group -> curate -> verify applied file paths
 
-**Timestamp:** 2026-05-26T14:25:50.483Z
+**Timestamp:** 2026-05-26T19:32:39.707Z
 
 **Author:** ByteRover context engineer
 
 ## Narrative
 ### Structure
-This guidance defines how to process curated context when recon is already available and when to switch to mapExtract for chunked inputs.
+This guidance documents the curation workflow conventions used in the project context tree.
 
 ### Dependencies
-Relies on precomputed recon metadata, task-scoped context variables, and curate result inspection.
+Depends on the RLM flow and the curated knowledge store under .brv/context-tree.
 
 ### Highlights
-The workflow emphasizes avoiding redundant recon calls, preserving raw context privacy, enforcing the 300000 ms timeout for mapExtract, and verifying via applied file paths.
+The context emphasizes single-pass processing for small contexts and a no-readback verification pattern.
 
 ### Rules
-Do NOT print raw context. Do NOT call tools.curation.recon when recon has already been precomputed. For chunked extraction use tools.curation.mapExtract() with timeout: 300000 on the code_exec call itself. Use tools.curation.groupBySubject() and tools.curation.dedup() to organize extractions. Verify via result.applied[].filePath — do NOT call readFile for verification.
+Do NOT print raw context. Do NOT call tools.curation.recon when recon has already been computed. Proceed directly to extraction. Verify via result.applied[].filePath and do NOT call readFile for verification.
 
 ## Facts
-- **rlm_curation_workflow**: The curation workflow uses the RLM approach with precomputed recon, single-pass extraction for small contexts, and mapExtract for chunked contexts. [convention]
-- **single_pass_recon_rule**: For single-pass contexts, recon is already computed and should not be called again before curating. [convention]
-- **mapextract_timeout**: When mapExtract is used, code_exec must set timeout: 300000 on the tool call itself. [convention]
-- **verification_rule**: Verification after curation must use result.applied[].filePath and must not use readFile for verification. [convention]
-- **no_raw_context_printing**: Context variables should not be printed raw during curation. [convention]
-- **current_task_id**: The current curation task references task ID __taskId_ed34ca7d_1074_42ed_966f_0e77b7807351. [project]
+- **context_tree**: The project uses a centralized curated context tree under .brv/context-tree for durable knowledge. [project]
+- **rlm_mode**: Curation workflows in this project prefer RLM single-pass processing when recon suggests single-pass. [convention]
+- **curate_operation_preference**: Curation operations should use UPSERT by default rather than ADD or UPDATE. [convention]
+- **verification_method**: The current curation guidance emphasizes verifying results via result.applied[].filePath instead of reading files back for verification. [convention]
+- **current_task**: The active task is to curate the provided context via the RLM approach. [other]
