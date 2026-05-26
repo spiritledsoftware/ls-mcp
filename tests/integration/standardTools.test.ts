@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { DocumentStore } from "../../src/lsp/documentStore.js";
+import { ServerResolutionError } from "../../src/lsp/serverIdentity.js";
 import { LspRequestTimeoutError } from "../../src/lsp/session.js";
 import type { AcquiredLspSession, ManagedLspSession } from "../../src/lsp/sessionManager.js";
 import type { LspRequestOptions } from "../../src/lsp/session.js";
@@ -61,6 +62,28 @@ function acquired(
     languageIds: ["typescript"],
     extensions: [".ts"],
   };
+}
+
+function serverResolutionError(
+  serverId: string,
+  code: "unknown_server" | "ambiguous_server" = "unknown_server",
+) {
+  return new ServerResolutionError({
+    code,
+    serverId,
+    message: `${code === "unknown_server" ? "Unknown" : "Ambiguous"} LSP server "${serverId}".`,
+    suggestions: [
+      {
+        id: "typescript-language-server",
+        score: 80,
+        reasons: ["prefix match"],
+        aliases: ["typescript"],
+        aliasDetails: [{ value: "typescript", kind: "language-id" }],
+        languageIds: ["typescript"],
+        extensions: [".ts"],
+      },
+    ],
+  });
 }
 
 async function createWorkspaceFile() {
@@ -123,6 +146,62 @@ describe("standard tool forwarding", () => {
           timeoutMs: 25,
         },
       },
+    });
+  });
+
+  it("preserves structured server resolution errors", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const handler = createStandardToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => {
+          throw serverResolutionError("typescrip");
+        }),
+        getSessionsForWorkspace: vi.fn(async () => []),
+      },
+      documentStore: new DocumentStore(),
+    });
+
+    const result = await handler("hover", {
+      workspaceRoot,
+      filePath,
+      line: 1,
+      character: 1,
+      serverId: "typescrip",
+    });
+
+    expect(result.results.acquisition).toMatchObject({
+      ok: false,
+      code: "unknown_server",
+      serverId: "typescrip",
+      suggestions: [expect.objectContaining({ id: "typescript-language-server" })],
+    });
+  });
+
+  it("preserves ambiguous server resolution errors", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const handler = createStandardToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => {
+          throw serverResolutionError("javascript", "ambiguous_server");
+        }),
+        getSessionsForWorkspace: vi.fn(async () => []),
+      },
+      documentStore: new DocumentStore(),
+    });
+
+    const result = await handler("hover", {
+      workspaceRoot,
+      filePath,
+      line: 1,
+      character: 1,
+      serverId: "javascript",
+    });
+
+    expect(result.results.acquisition).toMatchObject({
+      ok: false,
+      code: "ambiguous_server",
+      serverId: "javascript",
+      suggestions: [expect.objectContaining({ id: "typescript-language-server" })],
     });
   });
 

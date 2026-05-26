@@ -1,7 +1,10 @@
-import { basename } from "node:path";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ServerResolutionError } from "../../src/lsp/serverIdentity.js";
 import { LspSessionManager, type ManagedLspSession } from "../../src/lsp/sessionManager.js";
 
 interface StartedSession extends ManagedLspSession {
@@ -15,16 +18,16 @@ interface StartedSession extends ManagedLspSession {
 function createManager(options: ConstructorParameters<typeof LspSessionManager>[0] = {}) {
   const sessions: StartedSession[] = [];
   const { config: optionConfig, ...managerOptions } = options;
+  const configuredServers = optionConfig?.lsp?.servers ?? {
+    ts: { registry: "typescript", command: "ts-ls", args: ["--stdio"] },
+    json: { registry: "json", command: "json-ls" },
+  };
   const manager = new LspSessionManager({
     config: {
       ...optionConfig,
       lsp: {
         ...optionConfig?.lsp,
-        servers: {
-          ts: { registry: "typescript", command: "ts-ls", args: ["--stdio"] },
-          json: { registry: "json", command: "json-ls" },
-          ...optionConfig?.lsp?.servers,
-        },
+        servers: configuredServers,
       },
     },
     commandResolver:
@@ -97,8 +100,16 @@ describe("LspSessionManager", () => {
       config: {
         lsp: {
           servers: {
-            ts: { registry: "typescript", command: "configured-ts-ls" },
-            tsDuplicate: { registry: "typescript", command: "duplicate-ts-ls" },
+            ts: {
+              registry: "typescript",
+              serverId: "workspace-typescript-language-server",
+              command: "configured-ts-ls",
+            },
+            tsDuplicate: {
+              registry: "typescript",
+              serverId: "duplicate-typescript-language-server",
+              command: "duplicate-ts-ls",
+            },
           },
         },
       },
@@ -109,10 +120,69 @@ describe("LspSessionManager", () => {
       filePath: "/workspace/src/app.ts",
     });
 
-    expect(result.map((session) => session.serverId)).toEqual(["ts"]);
+    expect(result.map((session) => session.serverId)).toEqual([
+      "workspace-typescript-language-server",
+    ]);
     expect(sessions).toHaveLength(1);
     expect(sessions[0]?.command).toBe("configured-ts-ls");
     expect(sessions[0]?.starts).toBe(1);
+  });
+
+  it("keeps explicitly targeted configured registry overrides as separate sessions", async () => {
+    const { manager, sessions } = createManager({
+      config: {
+        lsp: {
+          servers: {
+            ts: {
+              registry: "typescript",
+              serverId: "workspace-typescript-language-server",
+              command: "configured-ts-ls",
+            },
+            tsDuplicate: {
+              registry: "typescript",
+              serverId: "duplicate-typescript-language-server",
+              command: "duplicate-ts-ls",
+            },
+          },
+        },
+      },
+    });
+
+    await manager.getSessionsForFile({
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/src/app.ts",
+      serverId: "ts",
+    });
+    await manager.getSessionsForFile({
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/src/app.ts",
+      serverId: "tsDuplicate",
+    });
+
+    expect(sessions.map((session) => session.command)).toEqual([
+      "configured-ts-ls",
+      "duplicate-ts-ls",
+    ]);
+    expect(
+      manager.listActiveSessions({ workspaceRoot: "/workspace", serverId: "tsDuplicate" }),
+    ).toEqual([expect.objectContaining({ configuredId: "tsDuplicate" })]);
+  });
+
+  it("rejects duplicate canonical IDs for duplicate configured registry servers", () => {
+    const { manager } = createManager({
+      config: {
+        lsp: {
+          servers: {
+            ts: { registry: "typescript", command: "configured-ts-ls" },
+            tsDuplicate: { registry: "typescript", command: "duplicate-ts-ls" },
+          },
+        },
+      },
+    });
+
+    expect(() => manager.listServers()).toThrow(
+      'LSP server ID collision: canonical serverId "typescript-language-server" is used by ts and tsDuplicate',
+    );
   });
 
   it("starts all matching deduped distinct server IDs when serverId is omitted", async () => {
@@ -134,7 +204,7 @@ describe("LspSessionManager", () => {
     });
 
     expect(result.map((session) => session.serverId)).toEqual([
-      "ts",
+      "typescript-language-server",
       "customTs",
       "customTsDuplicate",
     ]);
@@ -154,7 +224,380 @@ describe("LspSessionManager", () => {
       serverId: "json",
     });
 
-    expect(result.map((session) => session.serverId)).toEqual(["json"]);
+    expect(result.map((session) => session.serverId)).toEqual(["vscode-json-language-server"]);
+  });
+
+  it("resolves explicit compatibility alias serverId for file sessions", async () => {
+    const { manager } = createManager({ config: { lsp: { servers: {} } } });
+
+    const result = await manager.getSessionsForFile({
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/main.py",
+      serverId: "python",
+    });
+
+    expect(result.map((session) => session.serverId)).toEqual(["pyright-langserver"]);
+  });
+
+  it("resolves explicit compatibility alias serverId for workspace sessions", async () => {
+    const { manager } = createManager({ config: { lsp: { servers: {} } } });
+
+    const result = await manager.getSessionsForWorkspace({
+      workspaceRoot: "/workspace",
+      serverId: "yaml",
+    });
+
+    expect(result.map((session) => session.serverId)).toEqual(["yaml-language-server"]);
+  });
+
+  it("resolves explicit Mason alias serverId to configured canonical equivalent", async () => {
+    const { manager } = createManager();
+
+    const result = await manager.getSessionsForFile({
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/src/app.ts",
+      serverId: "ts_ls",
+    });
+
+    expect(result.map((session) => session.serverId)).toEqual(["typescript-language-server"]);
+  });
+
+  it("resolves explicit alias serverId for status listing", () => {
+    const { manager } = createManager({ config: { lsp: { servers: {} } } });
+
+    expect(
+      manager
+        .listServerStatuses({ workspaceRoot: "/workspace", serverId: "python" })
+        .map((server) => server.id),
+    ).toEqual(["pyright-langserver"]);
+  });
+
+  it("stops canonical active sessions by alias serverId", async () => {
+    const { manager, sessions } = createManager({ config: { lsp: { servers: {} } } });
+    await manager.getSessionsForFile({
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/main.py",
+      serverId: "pyright-langserver",
+    });
+
+    await expect(
+      manager.stopServer({ workspaceRoot: "/workspace", serverId: "python" }),
+    ).resolves.toBe(true);
+
+    expect(sessions[0]?.shutdowns).toBe(1);
+    expect(manager.listActiveSessions({ workspaceRoot: "/workspace" })).toEqual([]);
+  });
+
+  it("dedupes configured registry aliases with canonical built-ins in status and listing", () => {
+    const { manager } = createManager({
+      config: {
+        lsp: {
+          servers: {
+            yamlAlias: { registry: "yamlls", command: "yaml-ls" },
+          },
+        },
+      },
+    });
+
+    expect(manager.listServers().filter((server) => server.registryId === "yaml-ls")).toEqual([
+      expect.objectContaining({
+        id: "yaml-language-server",
+        configuredId: "yamlAlias",
+        registryId: "yaml-ls",
+      }),
+    ]);
+    expect(
+      manager
+        .listServerStatuses({ workspaceRoot: "/workspace", filePath: "/workspace/config.yaml" })
+        .map((server) => server.id),
+    ).toEqual(["yaml-language-server"]);
+  });
+
+  it("filters Deno activation for TypeScript files unless a Deno marker exists", async () => {
+    const workspaceRoot = await mkdtemp(join(tmpdir(), "lsp-mcp-deno-"));
+    try {
+      const { manager } = createManager({ config: { lsp: { servers: {} } } });
+      const filePath = join(workspaceRoot, "mod.ts");
+      await writeFile(filePath, "export const value = 1;\n");
+
+      expect(
+        manager
+          .listServerStatuses({ workspaceRoot, filePath })
+          .map((server) => server.registryId ?? server.id),
+      ).toContain("typescript");
+      expect(
+        manager
+          .listServerStatuses({ workspaceRoot, filePath })
+          .map((server) => server.registryId ?? server.id),
+      ).not.toContain("deno");
+
+      await writeFile(join(workspaceRoot, "deno.json"), "{}\n");
+
+      expect(
+        manager
+          .listServerStatuses({ workspaceRoot, filePath })
+          .map((server) => server.registryId ?? server.id),
+      ).toContain("deno");
+      expect(
+        manager
+          .listServerStatuses({ workspaceRoot, filePath })
+          .map((server) => server.registryId ?? server.id),
+      ).not.toContain("typescript");
+    } finally {
+      await rm(workspaceRoot, { force: true, recursive: true });
+    }
+  });
+
+  it("allows explicit TypeScript targeting inside Deno workspaces", async () => {
+    const workspaceRoot = await mkdtemp(join(tmpdir(), "lsp-mcp-deno-"));
+    try {
+      const { manager } = createManager({ config: { lsp: { servers: {} } } });
+      const filePath = join(workspaceRoot, "mod.ts");
+      await writeFile(filePath, "export const value = 1;\n");
+      await writeFile(join(workspaceRoot, "deno.json"), "{}\n");
+
+      const result = await manager.getSessionsForFile({
+        workspaceRoot,
+        filePath,
+        serverId: "typescript-language-server",
+      });
+
+      expect(result.map((session) => session.serverId)).toEqual(["typescript-language-server"]);
+    } finally {
+      await rm(workspaceRoot, { force: true, recursive: true });
+    }
+  });
+
+  it("exposes aliases and upstream metadata in server statuses", () => {
+    const { manager } = createManager({ config: { lsp: { servers: {} } } });
+
+    expect(
+      manager.listServerStatuses({ workspaceRoot: "/workspace", serverId: "ts_ls" })[0],
+    ).toMatchObject({
+      id: "typescript-language-server",
+      registryId: "typescript",
+      aliasDetails: expect.arrayContaining([{ value: "ts_ls", kind: "lspconfig" }]),
+      aliases: expect.arrayContaining(["ts_ls"]),
+      upstream: expect.objectContaining({ mason: expect.any(Object) }),
+    });
+  });
+
+  it("exposes canonical IDs, configured IDs, registry IDs, and alias details in listings", () => {
+    const { manager } = createManager();
+
+    expect(manager.listServers()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "typescript-language-server",
+          configuredId: "ts",
+          registryId: "typescript",
+          aliases: expect.arrayContaining(["ts", "typescript", "ts_ls"]),
+          aliasDetails: expect.arrayContaining([
+            { value: "ts", kind: "configured-id" },
+            { value: "typescript", kind: "registry-id" },
+            { value: "ts_ls", kind: "lspconfig" },
+            { value: "typescript", kind: "language-id" },
+          ]),
+        }),
+      ]),
+    );
+    const typescript = manager
+      .listServers()
+      .find((server) => server.id === "typescript-language-server");
+    expect(typescript?.aliases).toEqual([...new Set(typescript?.aliases ?? [])]);
+  });
+
+  it("uses configured serverId as canonical for registry-backed overrides", async () => {
+    const { manager, sessions } = createManager({
+      config: {
+        lsp: {
+          servers: {
+            workspaceTs: {
+              registry: "typescript",
+              serverId: "workspace-typescript",
+              command: "workspace-ts-ls",
+            },
+          },
+        },
+      },
+    });
+
+    expect(manager.listServers()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "workspace-typescript",
+          configuredId: "workspaceTs",
+          registryId: "typescript",
+          aliases: expect.arrayContaining(["workspaceTs", "typescript", "ts_ls"]),
+          aliasDetails: expect.arrayContaining([
+            { value: "workspaceTs", kind: "configured-id" },
+            { value: "typescript", kind: "registry-id" },
+          ]),
+        }),
+      ]),
+    );
+
+    const result = await manager.getSessionsForFile({
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/src/app.ts",
+      serverId: "workspaceTs",
+    });
+
+    expect(result.map((session) => session.serverId)).toEqual(["workspace-typescript"]);
+    expect(sessions.map((session) => session.command)).toEqual(["workspace-ts-ls"]);
+  });
+
+  it("uses configured serverId as canonical for custom overrides", async () => {
+    const { manager, sessions } = createManager({
+      config: {
+        lsp: {
+          servers: {
+            customTs: {
+              serverId: "custom-typescript",
+              command: "custom-ts-ls",
+              extensions: [".ts"],
+            },
+          },
+        },
+      },
+    });
+
+    expect(manager.listServers()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "custom-typescript",
+          configuredId: "customTs",
+          aliases: expect.arrayContaining(["customTs"]),
+          aliasDetails: expect.arrayContaining([{ value: "customTs", kind: "configured-id" }]),
+        }),
+      ]),
+    );
+
+    const result = await manager.getSessionsForFile({
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/src/app.ts",
+      serverId: "custom-typescript",
+    });
+
+    expect(result.map((session) => session.serverId)).toEqual(["custom-typescript"]);
+    expect(sessions.map((session) => session.command)).toEqual(["custom-ts-ls"]);
+  });
+
+  it("rejects duplicate configured canonical server IDs", () => {
+    const { manager } = createManager({
+      config: {
+        lsp: {
+          servers: {
+            first: { serverId: "shared-server", command: "first-ls" },
+            second: { serverId: "shared-server", command: "second-ls" },
+          },
+        },
+      },
+    });
+
+    expect(() => manager.listServers()).toThrow(
+      'LSP server ID collision: canonical serverId "shared-server" is used by first and second',
+    );
+  });
+
+  it("rejects configured-id aliases that collide with another server alias", () => {
+    const { manager } = createManager({
+      config: {
+        lsp: {
+          servers: {
+            foo: { serverId: "custom-a", command: "custom-a-ls" },
+            bar: { serverId: "custom-b", command: "foo" },
+          },
+        },
+      },
+    });
+
+    expect(() => manager.listServers()).toThrow(
+      'LSP server ID collision: alias "foo" for custom-a collides with alias for custom-b',
+    );
+  });
+
+  it("throws structured unknown server errors", () => {
+    const { manager } = createManager();
+
+    expect(() =>
+      manager.listServerStatuses({ workspaceRoot: "/workspace", serverId: "typescrip" }),
+    ).toThrow(ServerResolutionError);
+    try {
+      manager.listServerStatuses({ workspaceRoot: "/workspace", serverId: "typescrip" });
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "unknown_server",
+        serverId: "typescrip",
+        suggestions: expect.arrayContaining([
+          expect.objectContaining({ id: "typescript-language-server" }),
+        ]),
+      });
+    }
+  });
+
+  it("throws structured ambiguous server errors for contextless language aliases", () => {
+    const { manager } = createManager({ config: { lsp: { servers: {} } } });
+
+    expect(() =>
+      manager.listServerStatuses({ workspaceRoot: "/workspace", serverId: "javascript" }),
+    ).toThrow(ServerResolutionError);
+    try {
+      manager.listServerStatuses({ workspaceRoot: "/workspace", serverId: "javascript" });
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "ambiguous_server",
+        serverId: "javascript",
+        suggestions: expect.arrayContaining([
+          expect.objectContaining({ id: "typescript-language-server" }),
+          expect.objectContaining({ id: "deno-language-server" }),
+        ]),
+      });
+    }
+  });
+
+  it("resolves language aliases with file and activation context", async () => {
+    const workspaceRoot = await mkdtemp(join(tmpdir(), "lsp-mcp-deno-language-alias-"));
+    try {
+      const { manager } = createManager({ config: { lsp: { servers: {} } } });
+      const filePath = join(workspaceRoot, "mod.mjs");
+      await writeFile(filePath, "export const value = 1;\n");
+
+      await expect(
+        manager.getSessionsForFile({ workspaceRoot, filePath, serverId: "javascript" }),
+      ).resolves.toEqual([expect.objectContaining({ serverId: "typescript-language-server" })]);
+
+      await writeFile(join(workspaceRoot, "deno.json"), "{}\n");
+
+      await expect(
+        manager.getSessionsForFile({ workspaceRoot, filePath, serverId: "javascript" }),
+      ).resolves.toEqual([expect.objectContaining({ serverId: "deno-language-server" })]);
+    } finally {
+      await rm(workspaceRoot, { force: true, recursive: true });
+    }
+  });
+
+  it("resolves language aliases with language and activation context when no file path is provided", async () => {
+    const workspaceRoot = await mkdtemp(join(tmpdir(), "lsp-mcp-language-alias-status-"));
+    try {
+      const { manager } = createManager({ config: { lsp: { servers: {} } } });
+
+      expect(
+        manager
+          .listServerStatuses({ workspaceRoot, languageId: "javascript", serverId: "javascript" })
+          .map((server) => server.id),
+      ).toEqual(["typescript-language-server"]);
+
+      await writeFile(join(workspaceRoot, "deno.json"), "{}\n");
+
+      expect(
+        manager
+          .listServerStatuses({ workspaceRoot, languageId: "javascript", serverId: "javascript" })
+          .map((server) => server.id),
+      ).toEqual(["deno-language-server"]);
+    } finally {
+      await rm(workspaceRoot, { force: true, recursive: true });
+    }
   });
 
   it("starts only the provided serverId when multiple servers match", async () => {
@@ -571,7 +1014,7 @@ describe("LspSessionManager", () => {
 
     expect(commandResolver).toHaveBeenCalledWith(
       expect.objectContaining({
-        serverId: "ts",
+        serverId: "typescript-language-server",
         server: expect.objectContaining({ registry: "typescript" }),
       }),
     );
@@ -638,6 +1081,6 @@ describe("LspSessionManager", () => {
       languageId: "typescript",
     });
 
-    expect(result.map((session) => session.serverId)).toEqual(["ts"]);
+    expect(result.map((session) => session.serverId)).toEqual(["typescript-language-server"]);
   });
 });

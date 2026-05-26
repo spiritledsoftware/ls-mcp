@@ -4,15 +4,21 @@ on:
   push:
     branches:
       - main
-
-concurrency:
-  group: release-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
   id-token: write
+
+env:
+  # CI runs explicit quality gates; do not let Changesets' git pushes invoke
+  # Husky pre-push and start another pnpm verify in the release workspace.
+  HUSKY: 0
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -49,7 +55,7 @@ jobs:
         with:
           version: pnpm run version
           publish: pnpm run release
-          title: "chore: version Packages"
-          commit: "chore: version Packages"
+          title: "chore: version packages"
+          commit: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

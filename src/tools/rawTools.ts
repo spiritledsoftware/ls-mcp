@@ -11,7 +11,12 @@ import type { ToolHandlerContext } from "./registerTools.js";
 import { structuredToolError, type StructuredToolError } from "./toolErrors.js";
 
 type RawSessionManager = Pick<LspSessionManager, "getSessionsForFile" | "getSessionsForWorkspace"> &
-  Partial<Pick<LspSessionManager, "getSessionsForFileSettled" | "getSessionsForWorkspaceSettled">>;
+  Partial<
+    Pick<
+      LspSessionManager,
+      "getSessionsForFileSettled" | "getSessionsForWorkspaceSettled" | "resolveServerId"
+    >
+  >;
 
 export interface RawToolHandlerOptions {
   sessionManager: RawSessionManager;
@@ -52,6 +57,12 @@ export const rawToolInputSchemas = {
 
 type RawToolName = keyof typeof rawToolInputSchemas;
 
+const rawPublicToolNames = {
+  lsp_execute_command: "execute_command",
+  lsp_request: "request",
+  lsp_notify: "notify",
+} as const satisfies Record<RawToolName, string>;
+
 export const rawToolDescriptors = {
   lsp_execute_command: {
     title: "Execute LSP command",
@@ -80,7 +91,11 @@ export function createRawToolHandler(options: RawToolHandlerOptions) {
     const parsed = rawToolInputSchemas[toolName].parse(input);
     const acquisition = await acquireRawToolSessions(options.sessionManager, toolName, parsed);
     if (acquisition.sessions.length === 0 && Object.keys(acquisition.results).length === 0) {
-      return { ok: false, results: {}, error: `No matching LSP servers for ${toolName}` };
+      return {
+        ok: false,
+        results: {},
+        error: `No matching LSP servers for ${rawPublicToolNames[toolName]}`,
+      };
     }
 
     const perServer = await Promise.all(
@@ -125,7 +140,15 @@ async function acquireRawToolSessions(
     }
   }
 
-  const settled = await acquireSettledSessions(sessionManager, input);
+  let settled: SettledLspSessionAcquisition[];
+  try {
+    settled = await acquireSettledSessions(sessionManager, input);
+  } catch (error) {
+    return {
+      sessions: [],
+      results: { acquisition: { ok: false, ...structuredToolError(error) } },
+    };
+  }
   const sessions: AcquiredLspSession[] = [];
   const results: RawToolResult["results"] = {};
   for (const acquisition of settled) {
@@ -148,7 +171,10 @@ async function runRawTool(
   switch (toolName) {
     case "lsp_execute_command": {
       const commandInput = input as z.infer<(typeof rawToolInputSchemas)["lsp_execute_command"]>;
-      assertCommandAllowed(options.config ?? {}, acquired.serverId, commandInput.command);
+      assertCommandAllowed(options.config ?? {}, acquired.serverId, commandInput.command, {
+        resolveServerId: options.sessionManager.resolveServerId?.bind(options.sessionManager),
+        requireResolvedAllowlist: true,
+      });
       return acquired.session.sendRequest(
         "workspace/executeCommand",
         {

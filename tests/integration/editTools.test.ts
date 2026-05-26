@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DocumentStore, filePathToUri } from "../../src/lsp/documentStore.js";
+import { ServerResolutionError } from "../../src/lsp/serverIdentity.js";
 import { LspRequestTimeoutError, type LspRequestOptions } from "../../src/lsp/session.js";
 import type { AcquiredLspSession, ManagedLspSession } from "../../src/lsp/sessionManager.js";
 import { createEditToolHandler, EDITS_NOT_APPLIED_MESSAGE } from "../../src/tools/editTools.js";
@@ -64,6 +65,28 @@ function acquired(
   };
 }
 
+function serverResolutionError(
+  serverId: string,
+  code: "unknown_server" | "ambiguous_server" = "unknown_server",
+) {
+  return new ServerResolutionError({
+    code,
+    serverId,
+    message: `${code === "unknown_server" ? "Unknown" : "Ambiguous"} LSP server "${serverId}".`,
+    suggestions: [
+      {
+        id: "typescript-language-server",
+        score: 80,
+        reasons: ["prefix match"],
+        aliases: ["typescript"],
+        aliasDetails: [{ value: "typescript", kind: "language-id" }],
+        languageIds: ["typescript"],
+        extensions: [".ts"],
+      },
+    ],
+  });
+}
+
 async function createWorkspaceFile(content = "const value = 1;\n") {
   const workspaceRoot = await mkdtemp(resolve(tmpdir(), "lsp-mcp-edit-tools-"));
   tempDirs.push(workspaceRoot);
@@ -93,6 +116,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
     });
@@ -118,6 +142,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
     });
@@ -136,6 +161,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
     });
@@ -148,6 +174,58 @@ describe("edit-producing tools", () => {
       code: "LSP_REQUEST_TIMEOUT",
       method: "textDocument/formatting",
       timeoutMs: 40,
+    });
+  });
+
+  it("preserves structured server resolution errors", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const handler = createEditToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => {
+          throw serverResolutionError("typescrip");
+        }),
+        resolveServerId: vi.fn((serverId: string) => serverId),
+      },
+      documentStore: new DocumentStore(),
+    });
+
+    const result = await handler("lsp_format_document", {
+      workspaceRoot,
+      filePath,
+      serverId: "typescrip",
+    });
+
+    expect(result.results.acquisition).toMatchObject({
+      ok: false,
+      code: "unknown_server",
+      serverId: "typescrip",
+      suggestions: [expect.objectContaining({ id: "typescript-language-server" })],
+    });
+  });
+
+  it("preserves ambiguous server resolution errors", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const handler = createEditToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => {
+          throw serverResolutionError("javascript", "ambiguous_server");
+        }),
+        resolveServerId: vi.fn((serverId: string) => serverId),
+      },
+      documentStore: new DocumentStore(),
+    });
+
+    const result = await handler("lsp_format_document", {
+      workspaceRoot,
+      filePath,
+      serverId: "javascript",
+    });
+
+    expect(result.results.acquisition).toMatchObject({
+      ok: false,
+      code: "ambiguous_server",
+      serverId: "javascript",
+      suggestions: [expect.objectContaining({ id: "typescript-language-server" })],
     });
   });
 
@@ -194,6 +272,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
     });
@@ -474,6 +553,48 @@ describe("edit-producing tools", () => {
     });
   });
 
+  it("normalizes command allowlist aliases before executing code action commands", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile("const value = 1;\n");
+    const actions = [
+      {
+        title: "Fix all",
+        kind: "quickfix",
+        command: { command: "source.fixAll.ts", title: "Fix all" },
+      },
+    ];
+    const session = createSession(
+      { "textDocument/codeAction": actions, "workspace/executeCommand": { fixed: true } },
+      { codeActionProvider: true },
+    );
+    const handler = createEditToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => [
+          acquired("typescript-language-server", session, workspaceRoot),
+        ]),
+        resolveServerId: vi.fn((serverId: string) =>
+          serverId === "typescript" ? "typescript-language-server" : serverId,
+        ),
+      },
+      documentStore: new DocumentStore(),
+      config: { commands: { allow: { typescript: ["source.fixAll.ts"] } } },
+    });
+
+    const applied = await handler("lsp_code_actions", {
+      workspaceRoot,
+      filePath,
+      startLine: 1,
+      startCharacter: 1,
+      endLine: 1,
+      endCharacter: 6,
+      apply: true,
+    });
+
+    expect(applied.results["typescript-language-server"]).toMatchObject({
+      ok: true,
+      command: { ok: true, result: { fixed: true } },
+    });
+  });
+
   it("reports blocked code action commands clearly after applying edit portion", async () => {
     const { workspaceRoot, filePath } = await createWorkspaceFile("const value = 1;\n");
     const actions = [
@@ -500,6 +621,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
       config: { commands: { allow: { ts: ["source.organizeImports.ts"] } } },
@@ -613,6 +735,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
       config: { commands: { allow: { ts: ["source.organizeImports.ts"] } } },

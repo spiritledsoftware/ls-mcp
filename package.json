@@ -1,5 +1,5 @@
 {
-  "name": "@spiritledsoftware/ls-mcp",
+  "name": "language-server-mcp",
   "version": "0.2.0",
   "description": "MCP server exposing Language Server Protocol capabilities over stdio.",
   "keywords": [
@@ -9,18 +9,18 @@
     "mcp",
     "model-context-protocol"
   ],
-  "homepage": "https://github.com/spiritledsoftware/ls-mcp#readme",
+  "homepage": "https://github.com/spiritledsoftware/language-server-mcp#readme",
   "bugs": {
-    "url": "https://github.com/spiritledsoftware/ls-mcp/issues"
+    "url": "https://github.com/spiritledsoftware/language-server-mcp/issues"
   },
   "license": "MIT",
   "author": "Ian Pascoe",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/spiritledsoftware/ls-mcp.git"
+    "url": "git+https://github.com/spiritledsoftware/language-server-mcp.git"
   },
   "bin": {
-    "ls-mcp": "./dist/index.js"
+    "language-server-mcp": "./dist/index.js"
   },
   "files": [
     "dist",

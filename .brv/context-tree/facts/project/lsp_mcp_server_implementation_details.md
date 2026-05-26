@@ -1,18 +1,18 @@
 ---
 title: LSP MCP Server Implementation Details
-summary: The server added lazy stdio LSP sessions, managed installer locking, workspace security checks, diagnostics, edits, commands, raw LSP escape hatches, and MCP tool registration.
+summary: Implementation notes for the LSP MCP server covering transport, session management, diagnostics, edits, capabilities, command policy, and result normalization.
 tags: []
-related: []
+related: [facts/project/project_context_snapshot.md, facts/project/context_and_plan_execution_notes.md, facts/project/lsp_mcp_server_knowledge.md, facts/project/verification_and_release_readiness.md]
 keywords: []
 createdAt: '2026-05-24T21:20:18.489Z'
-updatedAt: '2026-05-24T21:20:18.489Z'
+updatedAt: '2026-05-25T20:31:25.328Z'
 ---
 ## Reason
-Capture important technical implementation details and safety fixes from the plan execution
+Curate implementation details from the provided context into durable project knowledge
 
 ## Raw Concept
 **Task:**
-Document the technical capabilities added by the LSP MCP server implementation
+Document the implementation details and repository coverage for the LSP MCP server project.
 
 **Changes:**
 - Added lazy local stdio LSP session management with idle shutdown
@@ -20,6 +20,8 @@ Document the technical capabilities added by the LSP MCP server implementation
 - Added managed on-demand LSP server registry with filesystem-backed locking
 - Added diagnostics, edit/apply, command execution, raw request/notify, and server lifecycle tools
 - Added MCP registration for implemented handlers
+- Captured the project module layout for LSP, MCP, registry, security, tools, and utilities.
+- Captured the available test suite and documentation plans relevant to the server implementation.
 
 **Files:**
 - src/lsp/session.ts
@@ -30,32 +32,67 @@ Document the technical capabilities added by the LSP MCP server implementation
 - src/tools/rawTools.ts
 - src/tools/serverTools.ts
 - src/tools/registerTools.ts
+- src/lsp/capabilities.ts
+- src/lsp/commandPolicy.ts
+- src/lsp/diagnosticStore.ts
+- src/lsp/documentStore.ts
+- src/lsp/editApplier.ts
+- src/lsp/methodRegistry.ts
+- src/lsp/resultNormalization.ts
+- src/lsp/sessionManager.ts
+- src/lsp/stdioTransport.ts
+- src/lsp/transport.ts
+- src/mcp/server.ts
+- src/mcp/stdio.ts
+- src/registry/builtins.ts
+- src/registry/githubInstaller.ts
+- src/registry/installer.ts
+- src/registry/masonSnapshot.ts
+- src/registry/npmInstaller.ts
+- docs/plans/2026-05-25-ci-cd.md
+- docs/plans/2026-05-25-lsp-output-schemas.md
+- docs/plans/2026-05-25-mason-backed-lsp-registry.md
+- docs/plans/lsp-mcp-server.md
+- tests/integration/diagnostics.test.ts
+- tests/integration/documentOpen.test.ts
+- tests/integration/e2e.test.ts
+- tests/integration/editTools.test.ts
+- tests/integration/executeCommand.test.ts
+- tests/integration/lazyStartup.test.ts
+- tests/integration/rawTools.test.ts
+- tests/integration/serverTools.test.ts
+- tests/integration/session.test.ts
+- tests/integration/standardTools.test.ts
 
 **Flow:**
-request -> load config -> resolve workspace -> acquire or start server/session -> apply workspace security -> execute LSP tool -> normalize result
+docs/plans and source modules -> LSP/MCP implementation -> registry and tool generation -> integration tests
 
-**Timestamp:** 2026-05-24T21:19:59.539Z
+**Timestamp:** 2026-05-25T20:31:12.848Z
 
 **Author:** assistant
 
 ## Narrative
 ### Structure
-The architecture spans config loading, path resolution, session management, registry and installer logic, transport, document storage, method registries, tool handlers, and MCP server wiring.
+The repository is organized around src/lsp for language-server behavior, src/mcp for MCP transport/server wiring, src/registry for installation and snapshot logic, src/security for workspace safety, and src/tools/generated for tool wrappers and schemas.
 
 ### Dependencies
-The release depended on filesystem-backed locks, session lifecycle hardening, request cancellation propagation, and document synchronization correctness.
+The implementation depends on generated schemas/tools, registry installers, session and document stores, and workspace security checks to safely expose LSP behavior through MCP.
 
 ### Highlights
-Major fixes included installer behavior corrections, transport lifecycle fixes, session shutdown hardening, document synchronization race fixes, edit preflight safety, and command-policy enforcement.
+The project has dedicated integration coverage for diagnostics, document opening, end-to-end flows, edits, command execution, lazy startup, raw/server tools, sessions, and standard tools.
 
 ### Rules
 No commit was made.
 
 ### Examples
-Managed installs reuse cached binaries, diagnostics can be gathered across pull and push models, and raw request/notification tools serve as escape hatches for unmodeled LSP methods.
+Useful touchpoints include the LSP transport/session pipeline, the registry installers and Mason snapshot support, and the docs/plans covering CI/CD and output schema generation.
 
 ## Facts
-- **managed_install_policy**: Managed installs are pinned and run with lifecycle scripts disabled. [project]
-- **workspace_security**: Workspace security checks now block document reads outside workspace boundaries. [project]
-- **document_state**: The document state is bounded with per-session LRU eviction and didClose support. [project]
-- **tool_surface**: The implementation includes typed LSP 3.17 tools for diagnostics, edits, command execution, raw requests and notifications, and server lifecycle management. [project]
+- **lsp_mcp_server_stack**: The project includes an LSP MCP server implementation with supporting LSP, MCP, registry, security, and tools modules. [project]
+- **lsp_module_coverage**: The source tree includes LSP modules for capabilities, command policy, diagnostic store, document store, edit applier, method registry, result normalization, session, session manager, stdio transport, and transport. [project]
+- **mcp_module_coverage**: The source tree includes MCP modules for server and stdio handling. [project]
+- **registry_module_coverage**: The source tree includes registry modules for builtins, GitHub installer, installer, locks, Mason snapshot, and npm installer. [project]
+- **tool_module_coverage**: The source tree includes generated tool modules for diagnostic tools, edit tools, output schemas, raw tools, register tools, server tools, standard tools, tool errors, and tool schemas. [project]
+- **docs_plans_coverage**: The repository contains docs/plans files for CI/CD, LSP output schemas, Mason-backed LSP registry, and an LSP MCP server plan. [project]
+- **test_coverage**: The repository contains tests for diagnostics, document open, end-to-end behavior, edit tools, execute command, lazy startup, raw tools, server tools, session, and standard tools. [project]
+- **current_runtime_timestamp**: The current date in the provided context is 2026-05-25T20:31:12.848Z. [project]

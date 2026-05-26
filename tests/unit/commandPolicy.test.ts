@@ -26,4 +26,48 @@ describe("command execution policy", () => {
       'Command "source.organizeImports.ts" is not allowed for server ts',
     );
   });
+
+  it("normalizes allowlist keys through a canonical server ID resolver", () => {
+    const config = { commands: { allow: { typescript: ["source.fixAll.ts"] } } };
+    const resolveServerId = (serverId: string) =>
+      serverId === "typescript" ? "typescript-language-server" : serverId;
+
+    expect(
+      isCommandAllowed(config, "typescript-language-server", "source.fixAll.ts", {
+        resolveServerId,
+      }),
+    ).toBe(true);
+    expect(
+      isCommandAllowed(config, "typescript-language-server", "source.organizeImports.ts", {
+        resolveServerId,
+      }),
+    ).toBe(false);
+  });
+
+  it("fails closed when an allowlist key cannot be resolved unambiguously", () => {
+    const config = { commands: { allow: { typescript: ["source.fixAll.ts"] } } };
+    const resolveServerId = () => {
+      throw new Error(
+        'Ambiguous LSP server "typescript". Did you mean: typescript-language-server, eslint-lsp?',
+      );
+    };
+
+    expect(() =>
+      assertCommandAllowed(config, "typescript-language-server", "source.fixAll.ts", {
+        resolveServerId,
+      }),
+    ).toThrow(
+      'Invalid commands.allow key "typescript": Ambiguous LSP server "typescript". Did you mean: typescript-language-server, eslint-lsp?',
+    );
+  });
+
+  it("fails closed when allowlist normalization is required but no resolver is provided", () => {
+    const config = { commands: { allow: { typescript: ["source.fixAll.ts"] } } };
+
+    expect(() =>
+      assertCommandAllowed(config, "typescript-language-server", "source.fixAll.ts", {
+        requireResolvedAllowlist: true,
+      }),
+    ).toThrow("Command allowlist requires server ID resolution");
+  });
 });

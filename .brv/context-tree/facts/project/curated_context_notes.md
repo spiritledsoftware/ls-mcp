@@ -1,18 +1,18 @@
 ---
 title: Curated Context Notes
-summary: Project curation notes capturing docs/plans active curation, durable knowledge retention, context-tree updates, and recon/extraction/curate workflow.
+summary: Project curation guidance covering context-tree organization, knowledge source handling, and RLM workflow expectations.
 tags: []
-related: [facts/project/curated_context_notes.md, facts/project/context.md]
+related: [facts/project/curated_context_notes.md, facts/project/context.md, facts/project/project_context_notes.md]
 keywords: []
 createdAt: '2026-05-24T09:52:30.266Z'
-updatedAt: '2026-05-25T10:07:31.330Z'
+updatedAt: '2026-05-25T20:11:08.757Z'
 ---
 ## Reason
-Preserve project curation workflow and docs/plans context as durable knowledge
+Preserve project-specific curation guidance and context notes from the provided RLM context
 
 ## Raw Concept
 **Task:**
-Document project curation workflow and knowledge preservation for docs/plans context
+Document the project-wide curation guidance and current context notes captured in the RLM source context.
 
 **Changes:**
 - Extracted key statements from inline context
@@ -31,29 +31,51 @@ Document project curation workflow and knowledge preservation for docs/plans con
 - Recorded that docs/plans is an actively curated module
 - Captured the practice of preserving findings as durable knowledge
 - Captured the recon -> extraction -> curate apply workflow
+- Recorded curation workflow guidance for the context tree
+- Captured handling rules for local and shared knowledge sources
+- Preserved constraints for query and curation operations
+
+**Files:**
+- .brv/context-tree/
+- .brv/context-tree/facts/project/
 
 **Flow:**
-context discovered -> facts extracted -> knowledge curated -> durable record stored
+context source -> guidance extraction -> deduplication -> UPSERT into facts/project
 
-**Timestamp:** 2026-05-25T10:07:24.689Z
+**Timestamp:** 2026-05-25T20:11:02.015Z
 
 **Author:** ByteRover context engineer
 
 ## Narrative
 ### Structure
-Notes describe how working module findings are preserved and curated into the context tree.
+This knowledge belongs under the facts/project domain as reusable project guidance rather than a feature-specific topic.
 
 ### Dependencies
-Uses the context tree as the durable store for extracted project knowledge.
+Depends on the RLM workflow conventions, the writable local context tree, and the distinction between local and shared knowledge sources.
 
 ### Highlights
-The docs/plans module is actively curated, and the established workflow is recon -> extraction -> curate apply.
+Preserves autonomous execution rules, verification expectations, and the requirement to use curated knowledge as the source of truth.
 
 ## Facts
-- **docs_plans_module**: The project has a docs/plans module that is actively curated. [project]
-- **knowledge_retention_policy**: This session preserved working module findings as durable knowledge instead of chat-only context. [project]
-- **context_tree_curation**: This session curated working module knowledge into the context tree. [project]
-- **curation_workflow**: The workflow used for docs/plans was recon -> extraction -> curate apply. [convention]
+- **curation_context**: -- [project]
+- **curation_context**: maintainability of `src/registry/builtins.ts` and `src/registry/masonSnapshot.ts` [project]
+- **curation_context**: correctness and performance of alias validation/resolution [project]
+- **curation_context**: correctness of activation filtering in `src/lsp/sessionManager.ts` [project]
+- **curation_context**: test quality and brittleness in registry/session tests [project]
+- **curation_context**: accidental scope creep or risky behavior changes [project]
+- **curation_context**: High: compatibility aliases resolve only as registry IDs, not as `serverId` targets. [project]
+- **curation_context**: Location: `src/registry/builtins.ts:311-321`, `src/registry/builtins.ts:422-432`, `src/lsp/sessionManager.ts:394-399`, `src/lsp/sessionManager.ts:427-431` [project]
+- **curation_context**: Evidence: legacy built-ins were renamed to canonical IDs like `pyright`, `gopls`, and `yaml-ls`, with aliases `python`, `go`, and `yaml`. However `resolveWorkspaceServers(serverId)` and explicit file targeting compare only `definition.id === serverId`; default built-in definitions are created with `metadata.id`, so `serverId: "python"`, `"go"`, or `"yaml"` now throws `Unknown LSP server`. [project]
+- **curation_context**: Impact: existing users who explicitly target prior built-in IDs or use lifecycle/status commands by those IDs will regress, even though alias support appears to preserve compatibility. [project]
+- **curation_context**: Recommended action: either preserve the old built-in `serverId`s for compatibility, or resolve `serverId` through the alias map anywhere user-supplied server IDs are accepted, including file targeting, workspace targeting, stop/status paths, and tests. [project]
+- **curation_context**: Medium: tests miss the alias path most likely to regress. [project]
+- **curation_context**: Location: `tests/unit/registry.test.ts:67-91`, `tests/unit/sessionManager.test.ts:162-181` [project]
+- **curation_context**: Evidence: tests verify `getBuiltInServer(alias)` and configured `registry: "yamlls"`, but not user-facing explicit `serverId` aliases such as `getSessionsForFile({ serverId: "python" })`, `getSessionsForWorkspace({ serverId: "yaml" })`, or `stopServer({ serverId: "go" })`. [project]
+- **curation_context**: Impact: current tests pass while compatibility server targeting is broken. [project]
+- **curation_context**: Recommended action: add session-manager tests for explicit legacy/Mason alias `serverId` behavior, or document that aliases are registry-only and update docs/API expectations accordingly. [project]
+- **curation_context**: Ran targeted tests: `pnpm test tests/unit/registry.test.ts tests/unit/sessionManager.test.ts` [project]
+- **curation_context**: Result: passed, 2 files / 27 tests. [project]
+- **curation_context**: Gap: full CI sequence was not run; review was limited to registry/session changes as requested. [project]
 
 ---
 

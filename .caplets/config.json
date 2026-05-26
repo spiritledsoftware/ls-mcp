@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/spiritledsoftware/caplets/main/schemas/caplets-config.schema.json",
+  "mcpServers": {
+    "lsp": {
+      "name": "Language Server Protocol (LSP)",
+      "description": "Integrate with language servers to provide code analysis, autocompletion, and other language-specific features for various programming languages.",
+      "command": "node",
+      "args": ["./dist/index.js"]
+    }
+  }
+}

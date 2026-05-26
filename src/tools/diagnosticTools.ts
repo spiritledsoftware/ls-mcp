@@ -55,8 +55,8 @@ export const lspDiagnosticsInputSchema = z
 
 const DEFAULT_DIAGNOSTICS_WAIT_MS = 750;
 
-export const lspDiagnosticsTool = {
-  name: "lsp_diagnostics",
+export const diagnosticsTool = {
+  name: "diagnostics",
   inputSchema: lspDiagnosticsInputSchema,
 } as const;
 
@@ -78,9 +78,17 @@ export function createDiagnosticsToolHandler(options: DiagnosticsToolHandlerOpti
         };
       }
     }
-    const sessions = await acquireSessionsSettled(options.sessionManager, parsed);
+    let sessions: SettledLspSessionAcquisition[];
+    try {
+      sessions = await acquireSessionsSettled(options.sessionManager, parsed);
+    } catch (error) {
+      return {
+        ok: false,
+        results: { acquisition: { ok: false, ...structuredToolError(error) } },
+      };
+    }
     if (sessions.length === 0) {
-      return { ok: false, results: {}, error: "No matching LSP servers for lsp_diagnostics" };
+      return { ok: false, results: {}, error: "No matching LSP servers for diagnostics" };
     }
 
     const perServer = await Promise.all(

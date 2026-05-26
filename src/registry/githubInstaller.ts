@@ -1,13 +1,21 @@
+import type { spawn } from "node:child_process";
+
 import type { BuiltInServerMetadata } from "./builtins.js";
 import type { InstalledCommand } from "./installer.js";
 
 export interface GitHubInstallOptions {
   installDir: string;
+  fetchImpl?: typeof fetch;
+  runCommand?: typeof spawn;
 }
 
 export async function installGitHubServer(
   metadata: BuiltInServerMetadata,
-  _options: GitHubInstallOptions,
+  options: GitHubInstallOptions,
 ): Promise<InstalledCommand> {
-  throw new Error(`GitHub installation is not implemented for ${metadata.id}`);
+  void options;
+  if (metadata.installStrategy.type !== "github") {
+    throw new Error(`${metadata.id} does not use GitHub install strategy`);
+  }
+  throw new Error("GitHub archive installation is not supported yet");
 }

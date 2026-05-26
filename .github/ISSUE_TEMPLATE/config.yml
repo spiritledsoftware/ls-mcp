@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and discussions
+    url: https://github.com/spiritledsoftware/ls-mcp/discussions
+    about: Ask usage questions, share ideas, or discuss ls-mcp with the community.
+  - name: Security reports
+    url: https://github.com/spiritledsoftware/ls-mcp/security/advisories/new
+    about: Please report security vulnerabilities privately.

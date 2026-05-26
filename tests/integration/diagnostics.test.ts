@@ -6,13 +6,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import { DiagnosticStore } from "../../src/lsp/diagnosticStore.js";
 import { DocumentStore, filePathToUri } from "../../src/lsp/documentStore.js";
+import { ServerResolutionError } from "../../src/lsp/serverIdentity.js";
 import { LspRequestTimeoutError, type LspRequestOptions } from "../../src/lsp/session.js";
 import { LspSessionManager } from "../../src/lsp/sessionManager.js";
 import type { AcquiredLspSession, ManagedLspSession } from "../../src/lsp/sessionManager.js";
-import {
-  createDiagnosticsToolHandler,
-  lspDiagnosticsTool,
-} from "../../src/tools/diagnosticTools.js";
+import { createDiagnosticsToolHandler, diagnosticsTool } from "../../src/tools/diagnosticTools.js";
 
 interface FakeSession extends ManagedLspSession {
   requests: { method: string; params: unknown }[];
@@ -76,6 +74,25 @@ function acquired(serverId: string, session: ManagedLspSession, workspaceRoot: s
   } satisfies AcquiredLspSession;
 }
 
+function serverResolutionError(serverId: string) {
+  return new ServerResolutionError({
+    code: "unknown_server",
+    serverId,
+    message: `Unknown LSP server "${serverId}".`,
+    suggestions: [
+      {
+        id: "typescript-language-server",
+        score: 80,
+        reasons: ["prefix match"],
+        aliases: ["typescript"],
+        aliasDetails: [{ value: "typescript", kind: "language-id" }],
+        languageIds: ["typescript"],
+        extensions: [".ts"],
+      },
+    ],
+  });
+}
+
 async function createWorkspaceFile() {
   const workspaceRoot = await mkdtemp(resolve(tmpdir(), "lsp-mcp-diagnostics-"));
   const filePath = resolve(workspaceRoot, "app.ts");
@@ -95,7 +112,30 @@ function createHandler(sessions: AcquiredLspSession[], waitMs = 25) {
   });
 }
 
-describe("lsp_diagnostics", () => {
+describe("diagnostics", () => {
+  it("preserves structured server resolution errors", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const handler = createDiagnosticsToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => {
+          throw serverResolutionError("typescrip");
+        }),
+        getSessionsForWorkspace: vi.fn(async () => []),
+      },
+      documentStore: new DocumentStore(),
+      diagnosticStore: new DiagnosticStore(),
+    });
+
+    const result = await handler({ workspaceRoot, filePath, serverId: "typescrip" });
+
+    expect(result.results.acquisition).toMatchObject({
+      ok: false,
+      code: "unknown_server",
+      serverId: "typescrip",
+      suggestions: [expect.objectContaining({ id: "typescript-language-server" })],
+    });
+  });
+
   it("returns cached push diagnostics for push-only servers", async () => {
     const { workspaceRoot, filePath } = await createWorkspaceFile();
     const session = createSession();
@@ -426,9 +466,22 @@ describe("lsp_diagnostics", () => {
     });
   });
 
-  it("exports an importable lsp_diagnostics tool descriptor", () => {
-    expect(lspDiagnosticsTool.name).toBe("lsp_diagnostics");
-    expect(lspDiagnosticsTool.inputSchema.parse({ workspaceRoot: "/workspace" })).toEqual({
+  it("reports the public diagnostics tool name when no servers match", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const handler = createHandler([]);
+
+    const result = await handler({ workspaceRoot, filePath });
+
+    expect(result).toEqual({
+      ok: false,
+      results: {},
+      error: "No matching LSP servers for diagnostics",
+    });
+  });
+
+  it("exports an importable diagnostics tool descriptor", () => {
+    expect(diagnosticsTool.name).toBe("diagnostics");
+    expect(diagnosticsTool.inputSchema.parse({ workspaceRoot: "/workspace" })).toEqual({
       workspaceRoot: "/workspace",
     });
   });

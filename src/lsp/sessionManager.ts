@@ -1,4 +1,5 @@
-import { extname, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { extname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { LspMcpConfig } from "../config/schema.js";
@@ -19,6 +20,15 @@ import {
   type LspSessionOptions,
   type ServerCapabilities,
 } from "./session.js";
+import {
+  buildAliasDetails,
+  formatAmbiguousServerError,
+  formatUnknownServerError,
+  rankServerIdentities,
+  type ServerAliasDetail,
+  type ServerIdentity,
+  type ServerSuggestion,
+} from "./serverIdentity.js";
 import type { LspProcessStatus } from "./transport.js";
 
 type ConfiguredServer = NonNullable<NonNullable<LspMcpConfig["lsp"]>["servers"]>[string];
@@ -91,6 +101,10 @@ export type SettledLspSessionAcquisition =
 
 interface ServerDefinition {
   id: string;
+  sessionId: string;
+  configuredId?: string;
+  registryId?: string;
+  aliasDetails: readonly ServerAliasDetail[];
   server: ConfiguredServer;
   metadata?: BuiltInServerMetadata;
   languageIds: readonly string[];
@@ -100,6 +114,7 @@ interface ServerDefinition {
 
 export interface LspServerDefinitionStatus {
   id: string;
+  configuredId?: string;
   registryId?: string;
   kind: "managed" | "system" | "custom";
   profile?: "managed" | "system";
@@ -108,8 +123,11 @@ export interface LspServerDefinitionStatus {
   args: readonly string[];
   languageIds: readonly string[];
   extensions: readonly string[];
-  installStrategy?: string;
+  installStrategy?: BuiltInServerMetadata["installStrategy"]["type"];
   version?: string;
+  aliases: readonly string[];
+  aliasDetails: readonly ServerAliasDetail[];
+  upstream?: BuiltInServerMetadata["upstream"];
   running: boolean;
   server: ConfiguredServer;
   downloads?: DownloadsConfig;
@@ -117,6 +135,7 @@ export interface LspServerDefinitionStatus {
 
 export interface LspActiveSessionStatus {
   serverId: string;
+  configuredId?: string;
   workspaceRoot: string;
   running: boolean;
   process?: LspProcessStatus;
@@ -129,6 +148,8 @@ export interface LspActiveSessionStatus {
 interface ActiveSession {
   key: string;
   serverId: string;
+  sessionId: string;
+  configuredId?: string;
   workspaceRoot: string;
   session: ManagedLspSession;
   idleTimer?: NodeJS.Timeout;
@@ -244,7 +265,8 @@ export class LspSessionManager {
   listServers(): LspServerDefinitionStatus[] {
     return this.resolveWorkspaceServers().map((definition) => ({
       id: definition.id,
-      registryId: definition.metadata?.id ?? definition.server.registry,
+      configuredId: definition.configuredId,
+      registryId: definition.registryId,
       kind: getServerKind(definition),
       profile: definition.server.profile,
       command: definition.server.command ?? definition.metadata?.command,
@@ -254,10 +276,17 @@ export class LspSessionManager {
       extensions: definition.extensions,
       installStrategy: definition.metadata?.installStrategy.type,
       version: definition.metadata?.version,
-      running: this.hasRunningSession(definition.id),
+      aliases: uniqueAliasValues(definition.aliasDetails),
+      aliasDetails: definition.aliasDetails,
+      upstream: definition.metadata?.upstream,
+      running: this.hasRunningSession(definition.sessionId),
       server: definition.server,
       downloads: this.config.downloads,
     }));
+  }
+
+  resolveServerId(serverId: string): string {
+    return this.resolveServerDefinition(this.getServerDefinitions(), serverId).id;
   }
 
   listServerStatuses(options: {
@@ -273,11 +302,20 @@ export class LspSessionManager {
           languageId: options.languageId,
           serverId: options.serverId,
         })
-      : this.resolveWorkspaceServers(options.serverId);
+      : this.resolveWorkspaceServers(options.serverId, {
+          workspaceRoot: options.workspaceRoot,
+          languageId: options.languageId,
+        }).filter(
+          (definition) =>
+            !options.languageId ||
+            (definition.languageIds.includes(options.languageId) &&
+              activationApplies(definition, options.workspaceRoot)),
+        );
     const normalizedRoot = resolve(options.workspaceRoot);
     return definitions.map((definition) => ({
       id: definition.id,
-      registryId: definition.metadata?.id ?? definition.server.registry,
+      configuredId: definition.configuredId,
+      registryId: definition.registryId,
       kind: getServerKind(definition),
       profile: definition.server.profile,
       command: definition.server.command ?? definition.metadata?.command,
@@ -287,21 +325,43 @@ export class LspSessionManager {
       extensions: definition.extensions,
       installStrategy: definition.metadata?.installStrategy.type,
       version: definition.metadata?.version,
-      running: this.sessions.has(sessionKey(normalizedRoot, definition.id)),
+      aliases: uniqueAliasValues(definition.aliasDetails),
+      aliasDetails: definition.aliasDetails,
+      upstream: definition.metadata?.upstream,
+      running: this.sessions.has(sessionKey(normalizedRoot, definition.sessionId)),
       server: definition.server,
       downloads: this.config.downloads,
     }));
+  }
+
+  searchServers(options: {
+    query: string;
+    workspaceRoot?: string;
+    filePath?: string;
+    languageId?: string;
+    limit?: number;
+  }): ServerSuggestion[] {
+    const results = rankDefinitions(this.getServerDefinitions(), options.query, {
+      workspaceRoot: options.workspaceRoot,
+      filePath: options.filePath,
+      languageId: options.languageId,
+    });
+    return options.limit === undefined ? results : results.slice(0, options.limit);
   }
 
   listActiveSessions(
     options: { workspaceRoot?: string; serverId?: string } = {},
   ): LspActiveSessionStatus[] {
     const workspaceRoot = options.workspaceRoot ? resolve(options.workspaceRoot) : undefined;
+    const definition = options.serverId
+      ? this.resolveServerDefinition(this.getServerDefinitions(), options.serverId)
+      : undefined;
     return [...this.sessions.values()]
       .filter((active) => !workspaceRoot || active.workspaceRoot === workspaceRoot)
-      .filter((active) => !options.serverId || active.serverId === options.serverId)
+      .filter((active) => !definition || active.sessionId === definition.sessionId)
       .map((active) => ({
         serverId: active.serverId,
+        configuredId: active.configuredId,
         workspaceRoot: active.workspaceRoot,
         running: true,
         process: active.session.status,
@@ -313,7 +373,8 @@ export class LspSessionManager {
   }
 
   async stopServer(options: { workspaceRoot: string; serverId: string }): Promise<boolean> {
-    const key = sessionKey(resolve(options.workspaceRoot), options.serverId);
+    const definition = this.resolveServerDefinition(this.getServerDefinitions(), options.serverId);
+    const key = sessionKey(resolve(options.workspaceRoot), definition.sessionId);
     const starting = this.starting.get(key);
     if (starting) {
       const active = await starting.catch(() => undefined);
@@ -345,6 +406,7 @@ export class LspSessionManager {
     await Promise.all(uniqueActive.map((session) => this.shutdownSession(session)));
     return uniqueActive.map((session) => ({
       serverId: session.serverId,
+      configuredId: session.configuredId,
       workspaceRoot: session.workspaceRoot,
       running: false,
       process: session.session.status,
@@ -358,10 +420,11 @@ export class LspSessionManager {
   private resolveMatchingServers(options: GetSessionsForFileOptions): ServerDefinition[] {
     const definitions = this.getServerDefinitions();
     if (options.serverId) {
-      const definition = definitions.find((server) => server.id === options.serverId);
-      if (!definition) {
-        throw new Error(`Unknown LSP server ${options.serverId}`);
-      }
+      const definition = this.resolveServerDefinition(definitions, options.serverId, {
+        workspaceRoot: options.workspaceRoot,
+        filePath: options.filePath,
+        languageId: options.languageId,
+      });
       if (
         hasMatchCriteria(definition) &&
         !matchesTarget(definition, options.filePath, options.languageId)
@@ -377,6 +440,7 @@ export class LspSessionManager {
     for (const definition of definitions) {
       if (
         !matchesTarget(definition, options.filePath, options.languageId) ||
+        !activationApplies(definition, options.workspaceRoot) ||
         seen.has(definition.dedupeId)
       ) {
         continue;
@@ -387,14 +451,13 @@ export class LspSessionManager {
     return matched;
   }
 
-  private resolveWorkspaceServers(serverId?: string): ServerDefinition[] {
+  private resolveWorkspaceServers(
+    serverId?: string,
+    context: { workspaceRoot?: string; filePath?: string; languageId?: string } = {},
+  ): ServerDefinition[] {
     const definitions = this.getServerDefinitions();
     if (serverId) {
-      const definition = definitions.find((server) => server.id === serverId);
-      if (!definition) {
-        throw new Error(`Unknown LSP server ${serverId}`);
-      }
-      return [definition];
+      return [this.resolveServerDefinition(definitions, serverId, context)];
     }
 
     const seen = new Set<string>();
@@ -419,17 +482,82 @@ export class LspSessionManager {
       if (metadata) {
         configuredRegistryIds.add(metadata.id);
       }
-      definitions.push(toServerDefinition(id, server, metadata));
+      definitions.push(toServerDefinition(id, server, metadata, { configured: true }));
     }
 
     for (const metadata of Object.values(builtInServers)) {
       if (configured[metadata.id] || configuredRegistryIds.has(metadata.id)) {
         continue;
       }
-      definitions.push(toServerDefinition(metadata.id, { registry: metadata.id }, metadata));
+      definitions.push(
+        toServerDefinition(metadata.id, { registry: metadata.id }, metadata, {
+          configured: false,
+        }),
+      );
     }
 
+    validateServerDefinitionCollisions(definitions);
     return definitions;
+  }
+
+  private resolveServerDefinition(
+    definitions: readonly ServerDefinition[],
+    serverId: string,
+    context: { workspaceRoot?: string; filePath?: string; languageId?: string } = {},
+  ): ServerDefinition {
+    const exactCanonical = definitions.filter((definition) => definition.id === serverId);
+    if (exactCanonical.length === 1) {
+      return exactCanonical[0]!;
+    }
+    if (exactCanonical.length > 1) {
+      throw formatAmbiguousServerError(
+        serverId,
+        rankDefinitions(exactCanonical, serverId, context),
+      );
+    }
+
+    const exactAliases = definitions.filter((definition) =>
+      definition.aliasDetails.some(
+        (alias) => alias.kind !== "language-id" && alias.value === serverId,
+      ),
+    );
+    if (exactAliases.length === 1) {
+      return exactAliases[0]!;
+    }
+    if (exactAliases.length > 1) {
+      throw formatAmbiguousServerError(serverId, rankDefinitions(exactAliases, serverId, context));
+    }
+
+    const languageAliases = definitions.filter((definition) =>
+      definition.aliasDetails.some(
+        (alias) => alias.kind === "language-id" && alias.value === serverId,
+      ),
+    );
+    const contextMatches = languageAliases.filter((definition) => {
+      const targetMatches = context.filePath
+        ? matchesTarget(definition, context.filePath, context.languageId)
+        : !context.languageId || definition.languageIds.includes(context.languageId);
+      return (
+        targetMatches &&
+        (!context.workspaceRoot || activationApplies(definition, context.workspaceRoot))
+      );
+    });
+    const languageMatches =
+      context.filePath || context.languageId ? contextMatches : languageAliases;
+    if (languageMatches.length === 1) {
+      return languageMatches[0]!;
+    }
+    if (languageMatches.length > 1) {
+      throw formatAmbiguousServerError(
+        serverId,
+        rankDefinitions(languageMatches, serverId, context),
+      );
+    }
+
+    throw formatUnknownServerError(
+      serverId,
+      rankDefinitions(definitions, serverId, context).slice(0, 5),
+    );
   }
 
   private async acquireSession(
@@ -437,7 +565,7 @@ export class LspSessionManager {
     definition: ServerDefinition,
   ): Promise<ActiveSession> {
     const normalizedRoot = resolve(workspaceRoot);
-    const key = sessionKey(normalizedRoot, definition.id);
+    const key = sessionKey(normalizedRoot, definition.sessionId);
     const existing = this.sessions.get(key);
     if (existing) {
       if (existing.shutdownPromise) {
@@ -519,7 +647,14 @@ export class LspSessionManager {
       workspaceRequestTimeoutMs: this.config.sessions?.workspaceRequestTimeoutMs,
       methodTimeoutsMs: this.config.sessions?.methodTimeoutsMs,
     });
-    const active: ActiveSession = { key, serverId: definition.id, workspaceRoot, session };
+    const active: ActiveSession = {
+      key,
+      serverId: definition.id,
+      sessionId: definition.sessionId,
+      configuredId: definition.configuredId,
+      workspaceRoot,
+      session,
+    };
 
     try {
       await session.start();
@@ -568,8 +703,8 @@ export class LspSessionManager {
     return session.shutdownPromise;
   }
 
-  private hasRunningSession(serverId: string): boolean {
-    return [...this.sessions.values()].some((session) => session.serverId === serverId);
+  private hasRunningSession(sessionId: string): boolean {
+    return [...this.sessions.values()].some((session) => session.sessionId === sessionId);
   }
 }
 
@@ -577,16 +712,168 @@ function toServerDefinition(
   id: string,
   server: ConfiguredServer,
   metadata?: BuiltInServerMetadata,
+  options: { configured: boolean } = { configured: true },
 ): ServerDefinition {
   const languageIds = server.languageIds ?? metadata?.languageIds ?? [];
   const extensions = normalizeExtensions(server.extensions ?? metadata?.extensions ?? []);
+  const canonicalId = server.serverId ?? metadata?.serverId ?? id;
+  const configuredId = options.configured && id !== canonicalId ? id : undefined;
+  const sessionId = configuredId ?? canonicalId;
+  const registryId = metadata?.id;
+  const aliasDetails = buildServerAliasDetails({
+    canonicalId,
+    configuredId,
+    registryId,
+    server,
+    metadata,
+    languageIds,
+  });
   return {
-    id,
+    id: canonicalId,
+    sessionId,
+    configuredId,
+    registryId,
+    aliasDetails,
     server,
     metadata,
     languageIds,
     extensions,
     dedupeId: metadata?.id ?? id,
+  };
+}
+
+function validateServerDefinitionCollisions(definitions: readonly ServerDefinition[]): void {
+  const canonicalOwners = new Map<string, ServerDefinition>();
+  for (const definition of definitions) {
+    const existing = canonicalOwners.get(definition.id);
+    if (existing) {
+      throw new Error(
+        `LSP server ID collision: canonical serverId "${definition.id}" is used by ${definitionLabel(existing)} and ${definitionLabel(definition)}`,
+      );
+    }
+    canonicalOwners.set(definition.id, definition);
+  }
+
+  const aliasOwners = new Map<string, { definition: ServerDefinition; alias: ServerAliasDetail }>();
+  for (const definition of definitions) {
+    for (const alias of definition.aliasDetails) {
+      if (alias.kind === "language-id" || alias.value === definition.id) {
+        continue;
+      }
+
+      const canonicalOwner = canonicalOwners.get(alias.value);
+      if (canonicalOwner && canonicalOwner !== definition) {
+        throw new Error(
+          `LSP server ID collision: alias "${alias.value}" for ${definition.id} collides with canonical serverId for ${canonicalOwner.id}`,
+        );
+      }
+
+      const existing = aliasOwners.get(alias.value);
+      if (
+        existing &&
+        existing.definition !== definition &&
+        isConfiguredAliasCollision(alias, existing.alias)
+      ) {
+        if (existing.alias.kind === "configured-id" && alias.kind !== "configured-id") {
+          throw new Error(
+            `LSP server ID collision: alias "${alias.value}" for ${existing.definition.id} collides with alias for ${definition.id}`,
+          );
+        }
+        throw new Error(
+          `LSP server ID collision: alias "${alias.value}" for ${definition.id} collides with alias for ${existing.definition.id}`,
+        );
+      }
+      aliasOwners.set(alias.value, { definition, alias });
+    }
+  }
+}
+
+function isConfiguredAliasCollision(
+  alias: ServerAliasDetail,
+  existing: ServerAliasDetail,
+): boolean {
+  return alias.kind === "configured-id" || existing.kind === "configured-id";
+}
+
+function definitionLabel(definition: ServerDefinition): string {
+  return definition.configuredId ?? definition.registryId ?? definition.id;
+}
+
+function buildServerAliasDetails(options: {
+  canonicalId: string;
+  configuredId?: string;
+  registryId?: string;
+  server: ConfiguredServer;
+  metadata?: BuiltInServerMetadata;
+  languageIds: readonly string[];
+}): ServerAliasDetail[] {
+  const masonIds: string[] = [];
+  const lspconfigIds: string[] = [];
+  const legacyIds: string[] = [];
+  const masonPackage = options.metadata?.upstream?.mason?.package;
+  const lspconfig = options.metadata?.upstream?.mason?.lspconfig;
+
+  for (const alias of options.metadata?.aliases ?? []) {
+    if (alias === options.canonicalId) {
+      continue;
+    }
+    if (alias === lspconfig) {
+      lspconfigIds.push(alias);
+    } else if (alias === masonPackage) {
+      masonIds.push(alias);
+    } else {
+      legacyIds.push(alias);
+    }
+  }
+
+  return buildAliasDetails({
+    configuredId: options.configuredId,
+    registryId: options.registryId,
+    legacyIds,
+    masonIds,
+    lspconfigIds,
+    languageIds: options.languageIds,
+    command: options.server.command ?? options.metadata?.command,
+    packageName:
+      options.metadata?.installStrategy.type === "npm"
+        ? options.metadata.installStrategy.package
+        : undefined,
+  });
+}
+
+function rankDefinitions(
+  definitions: readonly ServerDefinition[],
+  query: string,
+  context: { workspaceRoot?: string; filePath?: string; languageId?: string },
+) {
+  return rankServerIdentities(definitions.map(toServerIdentity), {
+    query,
+    filePath: context.filePath,
+    languageId: context.languageId,
+    activationApplies: context.workspaceRoot
+      ? (identity) => {
+          const definition = definitions.find((candidate) => candidate.id === identity.id);
+          return definition ? activationApplies(definition, context.workspaceRoot!) : undefined;
+        }
+      : undefined,
+  });
+}
+
+function toServerIdentity(definition: ServerDefinition): ServerIdentity {
+  return {
+    id: definition.id,
+    configuredId: definition.configuredId,
+    registryId: definition.registryId,
+    aliases: definition.aliasDetails.filter(
+      (alias) => alias.kind === "legacy-id" || alias.kind === "mason" || alias.kind === "lspconfig",
+    ),
+    command: definition.server.command ?? definition.metadata?.command,
+    packageName:
+      definition.metadata?.installStrategy.type === "npm"
+        ? definition.metadata.installStrategy.package
+        : undefined,
+    languageIds: definition.languageIds,
+    extensions: definition.extensions,
   };
 }
 
@@ -609,6 +896,23 @@ function matchesTarget(
 
 function hasMatchCriteria(definition: ServerDefinition): boolean {
   return definition.extensions.length > 0 || definition.languageIds.length > 0;
+}
+
+function activationApplies(definition: ServerDefinition, workspaceRoot: string): boolean {
+  const requiredRootMarkers = definition.metadata?.activation?.requiredRootMarkers;
+  return (
+    (!requiredRootMarkers?.length ||
+      requiredRootMarkers.some((marker) => existsSync(join(workspaceRoot, marker)))) &&
+    !hasAnyRootMarker(definition.metadata?.activation?.excludedRootMarkers, workspaceRoot)
+  );
+}
+
+function hasAnyRootMarker(markers: readonly string[] | undefined, workspaceRoot: string): boolean {
+  return Boolean(markers?.some((marker) => existsSync(join(workspaceRoot, marker))));
+}
+
+function uniqueAliasValues(aliasDetails: readonly ServerAliasDetail[]): string[] {
+  return [...new Set(aliasDetails.map((alias) => alias.value))];
 }
 
 function sessionKey(workspaceRoot: string, serverId: string): string {

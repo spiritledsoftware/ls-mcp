@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { serverAliasKinds } from "../lsp/serverIdentity.js";
 import { linkedEditingRangesSchema } from "./generated/lspLinkedEditingRange.js";
 import { monikerSchema } from "./generated/lspMoniker.js";
 import {
@@ -38,12 +39,86 @@ import {
   workspaceSymbolSchema,
 } from "./generated/lspTypes.js";
 
+export const aliasDetailSchema = z
+  .object({
+    value: z.string(),
+    kind: z.enum(serverAliasKinds),
+  })
+  .strict();
+
+export const serverSuggestionSchema = z
+  .object({
+    id: z.string(),
+    score: z.number(),
+    reasons: z.array(z.string()).readonly(),
+    aliases: z.array(z.string()).readonly(),
+    aliasDetails: z.array(aliasDetailSchema).readonly(),
+    registryId: z.string().optional(),
+    configuredId: z.string().optional(),
+    languageIds: z.array(z.string()).readonly(),
+    extensions: z.array(z.string()).readonly(),
+  })
+  .strict();
+
+const installStatusSchema = z
+  .object({
+    status: z.union([z.literal("ready"), z.literal("not-installed"), z.literal("error")]),
+    command: z.string(),
+    args: z.array(z.string()).readonly(),
+    source: z
+      .union([z.literal("configured"), z.literal("system"), z.literal("installed")])
+      .optional(),
+    reason: z.string().optional(),
+  })
+  .strict();
+
+const installStrategySchema = z.union([z.literal("system"), z.literal("npm"), z.literal("github")]);
+
+const masonPackageMetadataSchema = z
+  .object({
+    package: z.string(),
+    version: z.string(),
+    source: z.string(),
+    lspconfig: z.string().optional(),
+  })
+  .strict();
+
+const upstreamSchema = z
+  .object({
+    mason: masonPackageMetadataSchema.optional(),
+  })
+  .strict();
+
+export const serverInfoSchema = z
+  .object({
+    id: z.string(),
+    registryId: z.string().optional(),
+    configuredId: z.string().optional(),
+    kind: z.union([z.literal("managed"), z.literal("system"), z.literal("custom")]),
+    profile: z.union([z.literal("managed"), z.literal("system")]).optional(),
+    command: z.string().optional(),
+    configuredCommand: z.boolean(),
+    args: z.array(z.string()).readonly(),
+    languageIds: z.array(z.string()).readonly(),
+    extensions: z.array(z.string()).readonly(),
+    installStrategy: installStrategySchema.optional(),
+    version: z.string().optional(),
+    aliases: z.array(z.string()).readonly(),
+    aliasDetails: z.array(aliasDetailSchema).readonly(),
+    upstream: upstreamSchema.optional(),
+    install: installStatusSchema,
+    running: z.boolean(),
+  })
+  .strict();
+
 const structuredErrorSchema = z.object({
   ok: z.literal(false),
   error: z.string(),
   code: z.union([z.string(), z.number()]).optional(),
   method: z.string().optional(),
   timeoutMs: z.number().optional(),
+  serverId: z.string().optional(),
+  suggestions: z.array(serverSuggestionSchema).readonly().optional(),
 });
 
 const changedFileSchema = z.object({
@@ -176,19 +251,78 @@ export const editToolOutputSchemas = {
   ),
 } as const;
 
-export const serverStatusOutputSchema = z.object({
-  ok: z.literal(true),
-  servers: z.array(z.record(z.string(), z.unknown())),
-  sessions: z.array(z.record(z.string(), z.unknown())),
-});
+const processStatusSchema = z
+  .object({
+    state: z.union([z.literal("running"), z.literal("exited")]),
+    pid: z.number().optional(),
+    exitCode: z.number().nullable(),
+    signal: z.string().nullable(),
+    error: z.unknown().optional(),
+  })
+  .strict();
 
-export const stopServerOutputSchema = z.object({
-  ok: z.literal(true),
-  stopped: z.boolean(),
-  reason: z.string().optional(),
-  serverId: z.string(),
-  workspaceRoot: z.string(),
-});
+const capabilitiesSummarySchema = z
+  .object({
+    hover: z.boolean(),
+    completion: z.boolean(),
+    definition: z.boolean(),
+    references: z.boolean(),
+    documentSymbol: z.boolean(),
+    workspaceSymbol: z.boolean(),
+    codeAction: z.boolean(),
+    rename: z.boolean(),
+    formatting: z.boolean(),
+  })
+  .strict();
+
+const sessionHealthSchema = z
+  .object({
+    consecutiveFailures: z.number(),
+    restartCount: z.number(),
+    lastExitCode: z.number().nullable(),
+    lastExitSignal: z.string().nullable(),
+    lastStderr: z.array(z.string()).readonly(),
+    lastError: z.string().optional(),
+  })
+  .strict();
+
+const activeSessionStatusSchema = z
+  .object({
+    serverId: z.string(),
+    configuredId: z.string().optional(),
+    workspaceRoot: z.string(),
+    running: z.boolean(),
+    process: processStatusSchema.optional(),
+    capabilities: capabilitiesSummarySchema,
+    health: sessionHealthSchema.optional(),
+    lastAccessedAt: z.string().optional(),
+    idleDeadlineAt: z.string().optional(),
+  })
+  .strict();
+
+export const serverStatusOutputSchema = z.union([
+  z
+    .object({
+      ok: z.literal(true),
+      servers: z.array(serverInfoSchema),
+      sessions: z.array(activeSessionStatusSchema),
+    })
+    .strict(),
+  structuredErrorSchema.strict(),
+]);
+
+export const stopServerOutputSchema = z.union([
+  z
+    .object({
+      ok: z.literal(true),
+      stopped: z.boolean(),
+      reason: z.string().optional(),
+      serverId: z.string(),
+      workspaceRoot: z.string(),
+    })
+    .strict(),
+  structuredErrorSchema.strict(),
+]);
 
 export const stopWorkspaceOutputSchema = z.object({
   ok: z.literal(true),

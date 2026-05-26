@@ -6,11 +6,13 @@ import { describe, expect, it, vi } from "vitest";
 import { createMcpServer, listLspServers } from "../../src/mcp/server.js";
 import type { ToolHandlerContext, ToolRegistry } from "../../src/tools/registerTools.js";
 
-describe("lsp_list_servers", () => {
+describe("list_servers", () => {
   it("lists known LSP servers", async () => {
     await expect(listLspServers()).resolves.toMatchObject({
       ok: true,
-      servers: expect.arrayContaining([expect.objectContaining({ id: "typescript" })]),
+      servers: expect.arrayContaining([
+        expect.objectContaining({ id: "typescript-language-server" }),
+      ]),
     });
   });
 });
