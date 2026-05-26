@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- be8dd04: Expand built-in LSP registry coverage to opencode's documented server set and add Mason/nvim-lspconfig alias support for registry and explicit server targeting.
+
+### Patch Changes
+
+- be8dd04: Build out LSP registry and defaults
+
 ## 0.2.0
 
 ### Minor Changes
