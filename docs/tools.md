@@ -19,7 +19,16 @@ When `serverId` is provided:
 - Unknown or ambiguous server IDs fail with structured `code`, `serverId`, and `suggestions` fields.
 - For file-targeted tools, a server with match criteria must match the file extension or provided language ID.
 
-Canonical IDs are public language-server IDs, for example `typescript-language-server`, `vscode-json-language-server`, `pyright-langserver`, `rust-analyzer`, and `yaml-language-server`. Aliases include configured IDs, internal registry IDs, Mason names, nvim-lspconfig names such as `ts_ls`, command/package names, and language IDs. Language aliases can be ambiguous in polyglot ecosystems; for example `javascript` can match multiple servers. Use `search_servers` to inspect ranked candidates and then pass the canonical `id`.
+Canonical IDs are public language-server IDs, for example `typescript-language-server`, `vscode-json-language-server`, `pyright-langserver`, `rust-analyzer`, and `yaml-language-server`. Aliases include configured IDs, internal registry IDs, Mason names, nvim-lspconfig names such as `ts_ls`, command/package names, and language IDs. Tool targeting, lifecycle calls, status filters, and `commands.allow` keys all accept aliases, but responses and policy enforcement use the canonical ID after resolution.
+
+| Language   | Canonical ID                 | Common aliases                           |
+| ---------- | ---------------------------- | ---------------------------------------- |
+| TypeScript | `typescript-language-server` | `typescript`, `typescriptreact`, `ts_ls` |
+| Python     | `pyright-langserver`         | `python`, `pyright`                      |
+| Go         | `gopls`                      | `go`                                     |
+| YAML       | `yaml-language-server`       | `yaml`, `yaml-ls`, `yamlls`              |
+
+Language aliases can be ambiguous in polyglot ecosystems; for example `javascript` can match multiple servers. Use `search_servers` to inspect ranked candidates and then pass the canonical `id`.
 
 For edit-producing tools, `apply: true` requires `serverId` if more than one server matches. This prevents applying edits from multiple servers by accident.
 

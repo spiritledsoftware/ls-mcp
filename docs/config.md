@@ -77,7 +77,16 @@ Built-in servers use recognizable language-server IDs as public canonical IDs, f
 
 The `registry` field accepts canonical IDs, internal registry IDs, and Mason/nvim-lspconfig aliases. Explicit tool and lifecycle `serverId` targeting also accepts those aliases when they resolve unambiguously. Common aliases include `bashls`, `clojure_lsp`, `denols`, `elixirls`, `fsautocomplete`, `lua_ls`, `ocamllsp`, `prismals`, `ruby_lsp`, `rust_analyzer`, `terraformls`, `ts_ls`, `vue_ls`, and `yamlls`.
 
-Compatibility aliases from earlier built-ins are also preserved: `go` -> `gopls`, `python` -> `pyright-langserver`, and `yaml` -> `yaml-language-server`. Language IDs are aliases too, but they can be ambiguous; ambiguous aliases fail with structured suggestions and can be resolved with `search_servers`.
+Compatibility aliases from earlier built-ins are also preserved: `go` -> `gopls`, `python` -> `pyright-langserver`, and `yaml` -> `yaml-language-server`. Tool targeting, lifecycle calls, status filters, and `commands.allow` keys accept aliases, but runtime responses and policy enforcement use the canonical ID after resolution.
+
+| Language   | Canonical ID                 | Common aliases                           |
+| ---------- | ---------------------------- | ---------------------------------------- |
+| TypeScript | `typescript-language-server` | `typescript`, `typescriptreact`, `ts_ls` |
+| Python     | `pyright-langserver`         | `python`, `pyright`                      |
+| Go         | `gopls`                      | `go`                                     |
+| YAML       | `yaml-language-server`       | `yaml`, `yaml-ls`, `yamlls`              |
+
+Language IDs are aliases too, but they can be ambiguous; ambiguous aliases fail with structured suggestions and can be resolved with `search_servers`.
 
 Server options:
 

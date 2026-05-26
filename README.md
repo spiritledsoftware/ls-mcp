@@ -85,7 +85,16 @@ For file-targeted tools, `serverId` is optional. If omitted, the tool runs again
 
 Built-in registry coverage follows opencode's documented LSP server set, plus the existing JSON built-in. Public canonical built-in IDs are recognizable language-server IDs such as `typescript-language-server`, `vscode-json-language-server`, `pyright-langserver`, `gopls`, `rust-analyzer`, `yaml-language-server`, `svelte-language-server`, `intelephense`, and `julia-language-server`.
 
-The built-in registry also accepts configured IDs, internal registry IDs, Mason aliases, nvim-lspconfig aliases, command/package names, and language IDs where available. Compatibility aliases `go`, `python`, and `yaml` continue to resolve to `gopls`, `pyright-langserver`, and `yaml-language-server`. Ambiguous aliases fail with structured suggestions; use `search_servers` to discover the canonical ID to pass.
+Aliases are accepted for tool targeting, lifecycle calls, status filters, and `commands.allow` keys, but responses and enforcement use the canonical ID after resolution. For example:
+
+| Language   | Canonical ID                 | Common aliases                           |
+| ---------- | ---------------------------- | ---------------------------------------- |
+| TypeScript | `typescript-language-server` | `typescript`, `typescriptreact`, `ts_ls` |
+| Python     | `pyright-langserver`         | `python`, `pyright`                      |
+| Go         | `gopls`                      | `go`                                     |
+| YAML       | `yaml-language-server`       | `yaml`, `yaml-ls`, `yamlls`              |
+
+The built-in registry also accepts configured IDs, internal registry IDs, Mason aliases, nvim-lspconfig aliases, command/package names, and language IDs where available. Ambiguous aliases fail with structured suggestions; use `search_servers` to discover the canonical ID to pass.
 
 Mason data is vendored as a generated snapshot and never fetched at runtime, so built-in metadata and aliases are deterministic and offline. Managed downloads are available only for built-ins with supported pinned install strategies; other built-ins use system commands or explicit configured commands.
 

@@ -594,7 +594,7 @@ describe("server lifecycle tools", () => {
     ]);
   });
 
-  it("stops one running server and reports when it is not running", async () => {
+  it("stops one running server by alias and reports the canonical server ID", async () => {
     const { workspaceRoot, filePath } = await createWorkspace();
     const fake = new FakeSession();
     const manager = new LspSessionManager({
@@ -623,10 +623,15 @@ describe("server lifecycle tools", () => {
     expect(stopped).toMatchObject({
       ok: true,
       stopped: true,
-      serverId: "ts",
+      serverId: "typescript-language-server",
       workspaceRoot,
     });
-    expect(notRunning).toMatchObject({ ok: true, stopped: false, reason: "not-running" });
+    expect(notRunning).toMatchObject({
+      ok: true,
+      stopped: false,
+      reason: "not-running",
+      serverId: "typescript-language-server",
+    });
     expect(manager.activeSessionCount).toBe(0);
   });
 

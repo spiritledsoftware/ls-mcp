@@ -147,7 +147,9 @@ export function createServerToolHandlers(dependencies: ServerToolDependencies) {
     async stopServer(input: unknown): Promise<unknown> {
       const parsed = lspStopServerInputSchema.parse(input);
       let stopped: boolean;
+      let serverId: string;
       try {
+        serverId = sessionManager.resolveServerId(parsed.serverId);
         stopped = await sessionManager.stopServer(parsed);
       } catch (error) {
         if (error instanceof ServerResolutionError) {
@@ -160,14 +162,14 @@ export function createServerToolHandlers(dependencies: ServerToolDependencies) {
         ? {
             ok: true,
             stopped: true,
-            serverId: parsed.serverId,
+            serverId,
             workspaceRoot,
           }
         : {
             ok: true,
             stopped: false,
             reason: "not-running",
-            serverId: parsed.serverId,
+            serverId,
             workspaceRoot,
           };
     },
