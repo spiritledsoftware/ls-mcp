@@ -1,3 +1,6 @@
+---
+related: [facts/project/curated_context_notes_workflow.md]
+---
 # Topic: project
 
 ## Overview

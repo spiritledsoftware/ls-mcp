@@ -16,7 +16,7 @@
 
 ## Architecture Notes
 
-- This is a single Node/TypeScript ESM package named `@spiritledsoftware/ls-mcp`; the installed binary is `ls-mcp` and points to `dist/index.js`.
+- This is a single Node/TypeScript ESM package named `language-server-mcp`; the installed binary is `language-server-mcp` and points to `dist/index.js`.
 - `src/index.ts` only starts the stdio MCP server; `src/mcp/stdio.ts`, `src/mcp/server.ts`, and `src/tools/registerTools.ts` wire runtime behavior.
 - Tool calls go through a configured registry facade. User config loads at startup; project config loads lazily per normalized `workspaceRoot` and is cached for that MCP process.
 - Project config changes in `.lsp-mcp.json` or `.lsp-mcp.jsonc` are not watched. Restart the MCP process, or recreate the configured registry when embedding, before expecting config changes to apply.

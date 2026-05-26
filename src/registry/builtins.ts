@@ -7,6 +7,7 @@ export type InstallStrategy =
 
 export interface BuiltInServerMetadata {
   id: string;
+  serverId: string;
   languages: string[];
   languageIds: string[];
   extensions: string[];
@@ -43,6 +44,7 @@ function overlay(metadata: Overlay): Overlay {
 const builtInOverlay = {
   astro: overlay({
     id: "astro",
+    serverId: "astro-language-server",
     languageIds: ["astro"],
     extensions: [".astro"],
     rootMarkers: ["astro.config.mjs", "astro.config.ts", "package.json"],
@@ -54,6 +56,7 @@ const builtInOverlay = {
   }),
   bash: overlay({
     id: "bash",
+    serverId: "bash-language-server",
     languageIds: ["shellscript", "bash", "sh"],
     extensions: [".sh", ".bash", ".zsh"],
     rootMarkers: [".bashrc", ".shellcheckrc"],
@@ -65,6 +68,7 @@ const builtInOverlay = {
   }),
   clangd: overlay({
     id: "clangd",
+    serverId: "clangd",
     languageIds: ["c", "cpp", "objective-c", "objective-cpp"],
     extensions: [".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".hxx"],
     rootMarkers: ["compile_commands.json", "compile_flags.txt", ".clangd"],
@@ -76,6 +80,7 @@ const builtInOverlay = {
   }),
   "clojure-lsp": overlay({
     id: "clojure-lsp",
+    serverId: "clojure-lsp",
     languageIds: ["clojure"],
     extensions: [".clj", ".cljs", ".cljc", ".edn"],
     rootMarkers: ["deps.edn", "project.clj", "build.boot"],
@@ -87,6 +92,7 @@ const builtInOverlay = {
   }),
   csharp: overlay({
     id: "csharp",
+    serverId: "csharp-ls",
     languageIds: ["csharp"],
     extensions: [".cs"],
     rootMarkers: [".sln", ".csproj"],
@@ -98,6 +104,7 @@ const builtInOverlay = {
   }),
   dart: overlay({
     id: "dart",
+    serverId: "dart-analysis-server",
     languageIds: ["dart"],
     extensions: [".dart"],
     rootMarkers: ["pubspec.yaml"],
@@ -109,6 +116,7 @@ const builtInOverlay = {
   }),
   deno: overlay({
     id: "deno",
+    serverId: "deno-language-server",
     languageIds: ["typescript", "typescriptreact", "javascript", "javascriptreact"],
     extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs"],
     rootMarkers: ["deno.json", "deno.jsonc"],
@@ -121,6 +129,7 @@ const builtInOverlay = {
   }),
   "elixir-ls": overlay({
     id: "elixir-ls",
+    serverId: "elixir-ls",
     languageIds: ["elixir", "eelixir"],
     extensions: [".ex", ".exs", ".heex"],
     rootMarkers: ["mix.exs"],
@@ -132,6 +141,7 @@ const builtInOverlay = {
   }),
   eslint: overlay({
     id: "eslint",
+    serverId: "vscode-eslint-language-server",
     languageIds: ["javascript", "javascriptreact", "typescript", "typescriptreact"],
     extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"],
     rootMarkers: ["eslint.config.js", ".eslintrc", ".eslintrc.json", "package.json"],
@@ -154,6 +164,7 @@ const builtInOverlay = {
   }),
   fsharp: overlay({
     id: "fsharp",
+    serverId: "fsautocomplete",
     languageIds: ["fsharp"],
     extensions: [".fs", ".fsx", ".fsi"],
     rootMarkers: [".fsproj", ".sln"],
@@ -165,6 +176,7 @@ const builtInOverlay = {
   }),
   gleam: overlay({
     id: "gleam",
+    serverId: "gleam-language-server",
     languageIds: ["gleam"],
     extensions: [".gleam"],
     rootMarkers: ["gleam.toml"],
@@ -176,6 +188,7 @@ const builtInOverlay = {
   }),
   gopls: overlay({
     id: "gopls",
+    serverId: "gopls",
     languageIds: ["go"],
     extensions: [".go"],
     rootMarkers: ["go.mod", "go.work"],
@@ -188,6 +201,7 @@ const builtInOverlay = {
   }),
   hls: overlay({
     id: "hls",
+    serverId: "haskell-language-server",
     languageIds: ["haskell"],
     extensions: [".hs", ".lhs"],
     rootMarkers: ["hie.yaml", "stack.yaml", "cabal.project"],
@@ -199,6 +213,7 @@ const builtInOverlay = {
   }),
   jdtls: overlay({
     id: "jdtls",
+    serverId: "jdtls",
     languageIds: ["java"],
     extensions: [".java"],
     rootMarkers: ["pom.xml", "build.gradle", "settings.gradle"],
@@ -210,6 +225,7 @@ const builtInOverlay = {
   }),
   json: overlay({
     id: "json",
+    serverId: "vscode-json-language-server",
     languageIds: ["json", "jsonc"],
     extensions: [".json", ".jsonc"],
     rootMarkers: ["package.json"],
@@ -221,6 +237,7 @@ const builtInOverlay = {
   }),
   julials: overlay({
     id: "julials",
+    serverId: "julia-language-server",
     languageIds: ["julia"],
     extensions: [".jl"],
     rootMarkers: ["Project.toml", "Manifest.toml"],
@@ -232,6 +249,7 @@ const builtInOverlay = {
   }),
   "kotlin-ls": overlay({
     id: "kotlin-ls",
+    serverId: "kotlin-language-server",
     languageIds: ["kotlin"],
     extensions: [".kt", ".kts"],
     rootMarkers: ["settings.gradle", "settings.gradle.kts", "pom.xml"],
@@ -243,6 +261,7 @@ const builtInOverlay = {
   }),
   "lua-ls": overlay({
     id: "lua-ls",
+    serverId: "lua-language-server",
     languageIds: ["lua"],
     extensions: [".lua"],
     rootMarkers: [".luarc.json", ".luarc.jsonc", ".stylua.toml"],
@@ -254,6 +273,7 @@ const builtInOverlay = {
   }),
   nixd: overlay({
     id: "nixd",
+    serverId: "nixd",
     languageIds: ["nix"],
     extensions: [".nix"],
     rootMarkers: ["flake.nix", "default.nix"],
@@ -265,6 +285,7 @@ const builtInOverlay = {
   }),
   "ocaml-lsp": overlay({
     id: "ocaml-lsp",
+    serverId: "ocaml-lsp",
     languageIds: ["ocaml", "reason"],
     extensions: [".ml", ".mli", ".re", ".rei"],
     rootMarkers: ["dune-project", "dune", "*.opam"],
@@ -276,6 +297,7 @@ const builtInOverlay = {
   }),
   oxlint: overlay({
     id: "oxlint",
+    serverId: "oxlint-language-server",
     languageIds: ["javascript", "javascriptreact", "typescript", "typescriptreact"],
     extensions: [".js", ".jsx", ".ts", ".tsx"],
     rootMarkers: ["oxlint.json", ".oxlintrc.json", "package.json"],
@@ -288,6 +310,7 @@ const builtInOverlay = {
   }),
   "php intelephense": overlay({
     id: "php intelephense",
+    serverId: "intelephense",
     languageIds: ["php"],
     extensions: [".php"],
     rootMarkers: ["composer.json", "index.php"],
@@ -299,6 +322,7 @@ const builtInOverlay = {
   }),
   prisma: overlay({
     id: "prisma",
+    serverId: "prisma-language-server",
     languageIds: ["prisma"],
     extensions: [".prisma"],
     rootMarkers: ["schema.prisma", "package.json"],
@@ -310,6 +334,7 @@ const builtInOverlay = {
   }),
   pyright: overlay({
     id: "pyright",
+    serverId: "pyright-langserver",
     languageIds: ["python"],
     extensions: [".py", ".pyi"],
     rootMarkers: ["pyproject.toml", "setup.py", "requirements.txt", ".python-version"],
@@ -322,6 +347,7 @@ const builtInOverlay = {
   }),
   razor: overlay({
     id: "razor",
+    serverId: "razor-language-server",
     languageIds: ["razor"],
     extensions: [".razor", ".cshtml"],
     rootMarkers: [".sln", ".csproj"],
@@ -333,6 +359,7 @@ const builtInOverlay = {
   }),
   "ruby-lsp": overlay({
     id: "ruby-lsp",
+    serverId: "ruby-lsp",
     languageIds: ["ruby"],
     extensions: [".rb"],
     rootMarkers: ["Gemfile", ".ruby-version"],
@@ -344,6 +371,7 @@ const builtInOverlay = {
   }),
   rust: overlay({
     id: "rust",
+    serverId: "rust-analyzer",
     languageIds: ["rust"],
     extensions: [".rs"],
     rootMarkers: ["Cargo.toml", "rust-project.json"],
@@ -355,6 +383,7 @@ const builtInOverlay = {
   }),
   "sourcekit-lsp": overlay({
     id: "sourcekit-lsp",
+    serverId: "sourcekit-lsp",
     languageIds: ["swift"],
     extensions: [".swift"],
     rootMarkers: ["Package.swift"],
@@ -366,6 +395,7 @@ const builtInOverlay = {
   }),
   svelte: overlay({
     id: "svelte",
+    serverId: "svelte-language-server",
     languageIds: ["svelte"],
     extensions: [".svelte"],
     rootMarkers: ["svelte.config.js", "svelte.config.ts", "package.json"],
@@ -377,6 +407,7 @@ const builtInOverlay = {
   }),
   terraform: overlay({
     id: "terraform",
+    serverId: "terraform-ls",
     languageIds: ["terraform", "terraform-vars"],
     extensions: [".tf", ".tfvars"],
     rootMarkers: [".terraform", ".terraform.lock.hcl"],
@@ -388,6 +419,7 @@ const builtInOverlay = {
   }),
   tinymist: overlay({
     id: "tinymist",
+    serverId: "tinymist",
     languageIds: ["typst"],
     extensions: [".typ"],
     rootMarkers: ["typst.toml"],
@@ -399,6 +431,7 @@ const builtInOverlay = {
   }),
   typescript: overlay({
     id: "typescript",
+    serverId: "typescript-language-server",
     languageIds: ["typescript", "typescriptreact", "javascript", "javascriptreact"],
     extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
     rootMarkers: ["tsconfig.json", "jsconfig.json", "package.json"],
@@ -411,6 +444,7 @@ const builtInOverlay = {
   }),
   vue: overlay({
     id: "vue",
+    serverId: "vue-language-server",
     languageIds: ["vue"],
     extensions: [".vue"],
     rootMarkers: ["vue.config.js", "vite.config.ts", "package.json"],
@@ -422,6 +456,7 @@ const builtInOverlay = {
   }),
   "yaml-ls": overlay({
     id: "yaml-ls",
+    serverId: "yaml-language-server",
     languageIds: ["yaml"],
     extensions: [".yaml", ".yml"],
     rootMarkers: [".yamllint", ".prettierrc", "package.json"],
@@ -434,6 +469,7 @@ const builtInOverlay = {
   }),
   zls: overlay({
     id: "zls",
+    serverId: "zls",
     languageIds: ["zig"],
     extensions: [".zig", ".zon"],
     rootMarkers: ["build.zig", "zls.json"],
@@ -449,13 +485,18 @@ function server(metadata: Overlay): BuiltInServerMetadata {
   const mason = (masonSnapshot as Partial<Record<string, MasonPackageMetadata>>)[metadata.id];
   return {
     ...metadata,
-    aliases: [
+    aliases: dedupeAliases([
+      ...(metadata.serverId !== metadata.id ? [metadata.serverId] : []),
       ...(mason?.lspconfig && mason.lspconfig !== metadata.id ? [mason.lspconfig] : []),
       ...(metadata.aliases ?? []),
-    ],
+    ]),
     languages: metadata.languageIds,
     upstream: mason ? { mason } : undefined,
   };
+}
+
+function dedupeAliases(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 export const builtInServers = Object.fromEntries(

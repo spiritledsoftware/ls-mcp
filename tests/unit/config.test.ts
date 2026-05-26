@@ -191,6 +191,27 @@ describe("loadConfig", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it("loads configured LSP serverId overrides without warning", async () => {
+    const configHome = await makeTempDir();
+    const warn = vi.fn();
+    await writeJson(join(configHome, "lsp-mcp", "config.json"), {
+      lsp: {
+        servers: {
+          ts: { registry: "typescript", serverId: "workspace-typescript" },
+        },
+      },
+    });
+
+    const result = await loadConfig({
+      env: { XDG_CONFIG_HOME: configHome },
+      homeDir: "/missing",
+      warn,
+    });
+
+    expect(result.config.lsp?.servers?.ts?.serverId).toBe("workspace-typescript");
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it("fails with a precise message for invalid known fields", async () => {
     const configHome = await makeTempDir();
     await writeJson(join(configHome, "lsp-mcp", "config.json"), { lsp: { servers: [] } });

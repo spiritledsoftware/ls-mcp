@@ -1,15 +1,15 @@
 <div align="center">
-  <h1>ls-mcp</h1>
+  <h1>language-server-mcp</h1>
   <p><strong>Language Server Protocol tools for any Model Context Protocol host.</strong></p>
   <p>
-    <a href="https://www.npmjs.com/package/@spiritledsoftware/ls-mcp"><img alt="npm version" src="https://img.shields.io/npm/v/@spiritledsoftware/ls-mcp?color=cb3837"></a>
-    <a href="https://www.npmjs.com/package/@spiritledsoftware/ls-mcp"><img alt="npm downloads" src="https://img.shields.io/npm/dm/@spiritledsoftware/ls-mcp"></a>
-    <a href="https://www.npmjs.com/package/@spiritledsoftware/ls-mcp"><img alt="Node.js version" src="https://img.shields.io/node/v/@spiritledsoftware/ls-mcp"></a>
-    <a href="https://github.com/spiritledsoftware/ls-mcp/actions/workflows/ci.yml"><img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/spiritledsoftware/ls-mcp/ci.yml?branch=main&label=CI"></a>
-    <a href="LICENSE"><img alt="License" src="https://img.shields.io/npm/l/@spiritledsoftware/ls-mcp"></a>
+    <a href="https://www.npmjs.com/package/language-server-mcp"><img alt="npm version" src="https://img.shields.io/npm/v/@spiritledsoftware/language-server-mcp?color=cb3837"></a>
+    <a href="https://www.npmjs.com/package/language-server-mcp"><img alt="npm downloads" src="https://img.shields.io/npm/dm/@spiritledsoftware/language-server-mcp"></a>
+    <a href="https://www.npmjs.com/package/language-server-mcp"><img alt="Node.js version" src="https://img.shields.io/node/v/@spiritledsoftware/language-server-mcp"></a>
+    <a href="https://github.com/spiritledsoftware/language-server-mcp/actions/workflows/ci.yml"><img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/spiritledsoftware/language-server-mcp/ci.yml?branch=main&label=CI"></a>
+    <a href="LICENSE"><img alt="License" src="https://img.shields.io/npm/l/language-server-mcp"></a>
   </p>
   <p>
-    <a href="https://www.npmjs.com/package/@spiritledsoftware/ls-mcp">NPM</a>
+    <a href="https://www.npmjs.com/package/language-server-mcp">NPM</a>
     · <a href="docs/config.md">Configuration</a>
     · <a href="docs/tools.md">Tools</a>
     · <a href="docs/architecture.md">Architecture</a>
@@ -17,7 +17,7 @@
   </p>
 </div>
 
-`ls-mcp` gives MCP hosts access to LSP features such as hover, definitions, references, diagnostics, symbols, formatting, code actions, and workspace edits.
+`language-server-mcp` gives MCP hosts access to LSP features such as hover, definitions, references, diagnostics, symbols, formatting, code actions, and workspace edits.
 
 It runs over stdio, starts local LSP servers on demand, and is designed to be launched directly by an MCP host with `npx`. Requires Node.js 22+.
 
@@ -28,9 +28,9 @@ Configure your MCP host to run the published package over stdio:
 ```json
 {
   "mcpServers": {
-    "ls-mcp": {
+    "lsp": {
       "command": "npx",
-      "args": ["-y", "@spiritledsoftware/ls-mcp"]
+      "args": ["-y", "language-server-mcp"]
     }
   }
 }
@@ -39,14 +39,14 @@ Configure your MCP host to run the published package over stdio:
 This keeps the MCP host on the latest published package version unless your host pins or caches `npx` packages.
 
 > [!TIP]
-> **Using `ls-mcp` with agents?** [`caplets`](https://github.com/spiritledsoftware/caplets) is the best way to expose this MCP server to agent workflows. `ls-mcp` provides a large LSP surface area with many tools and rich project context; Caplets helps curate that surface into focused, agent-friendly capabilities instead of handing every tool to every agent directly.
+> **Using `language-server-mcp` with agents?** [`caplets`](https://github.com/spiritledsoftware/caplets) is the best way to expose this MCP server to agent workflows. `language-server-mcp` provides a large LSP surface area with many tools and rich project context; Caplets helps curate that surface into focused, agent-friendly capabilities instead of handing every tool to every agent directly.
 
 For local development from a checkout, build first and point your host at the compiled entrypoint:
 
 ```json
 {
   "mcpServers": {
-    "ls-mcp-local": {
+    "lsp": {
       "command": "node",
       "args": ["/absolute/path/to/checkout/dist/index.js"]
     }
@@ -105,11 +105,11 @@ pnpm test
 pnpm run dev
 ```
 
-After `pnpm run build`, the CLI entrypoint is `dist/index.js`. The installed package binary name is `ls-mcp`.
+After `pnpm run build`, the CLI entrypoint is `dist/index.js`. The installed package binary name is `language-server-mcp`.
 
 ## Safety Defaults
 
-`ls-mcp` defaults to conservative behavior for file modification and process execution:
+`language-server-mcp` defaults to conservative behavior for file modification and process execution:
 
 - Edit-producing tools return edits by default and do not write files unless `apply: true` is passed.
 - `apply: true` requires `serverId` when more than one matching LSP server would produce edits.

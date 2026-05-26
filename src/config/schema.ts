@@ -5,6 +5,7 @@ export const logLevelSchema = z.enum(["debug", "info", "warn", "error"]);
 export const lspServerSchema = z
   .object({
     registry: z.string().optional(),
+    serverId: z.string().optional(),
     profile: z.enum(["managed", "system"]).optional(),
     command: z.string().optional(),
     args: z.array(z.string()).optional(),

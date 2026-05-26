@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { configSchema } from "../../src/config/schema.js";
+import { buildAliasDetails } from "../../src/lsp/serverIdentity.js";
 import {
   builtInServers,
   getBuiltInServer,
@@ -49,6 +50,7 @@ describe("built-in registry", () => {
 
     expect(builtInServers.typescript).toMatchObject({
       id: "typescript",
+      serverId: "typescript-language-server",
       languageIds: ["typescript", "typescriptreact", "javascript", "javascriptreact"],
       extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
       command: "typescript-language-server",
@@ -64,8 +66,55 @@ describe("built-in registry", () => {
     expect(builtInServers.clangd.installStrategy.type).toBe("system");
   });
 
-  it("resolves Mason and compatibility aliases to canonical opencode IDs", () => {
+  it("defines explicit public canonical server IDs separate from registry IDs", () => {
+    expect(builtInServers.typescript).toMatchObject({
+      id: "typescript",
+      serverId: "typescript-language-server",
+    });
+    expect(builtInServers.json).toMatchObject({
+      id: "json",
+      serverId: "vscode-json-language-server",
+    });
+    expect(builtInServers.eslint).toMatchObject({
+      id: "eslint",
+      serverId: "vscode-eslint-language-server",
+    });
+    expect(builtInServers.pyright).toMatchObject({ id: "pyright", serverId: "pyright-langserver" });
+    expect(builtInServers.rust).toMatchObject({ id: "rust", serverId: "rust-analyzer" });
+    expect(builtInServers["yaml-ls"]).toMatchObject({
+      id: "yaml-ls",
+      serverId: "yaml-language-server",
+    });
+    expect(builtInServers.svelte).toMatchObject({
+      id: "svelte",
+      serverId: "svelte-language-server",
+    });
+    expect(builtInServers["php intelephense"]).toMatchObject({
+      id: "php intelephense",
+      serverId: "intelephense",
+    });
+    expect(builtInServers.julials).toMatchObject({
+      id: "julials",
+      serverId: "julia-language-server",
+    });
+
+    for (const server of Object.values(builtInServers)) {
+      expect(server.serverId).toEqual(expect.any(String));
+      expect(server.serverId).not.toBe("");
+    }
+  });
+
+  it("resolves Mason, lspconfig, and old registry ID aliases to internal registry IDs", () => {
     expect(Object.fromEntries(getBuiltInServerAliases())).toMatchObject({
+      "typescript-language-server": "typescript",
+      "vscode-json-language-server": "json",
+      "vscode-eslint-language-server": "eslint",
+      "pyright-langserver": "pyright",
+      "rust-analyzer": "rust",
+      "yaml-language-server": "yaml-ls",
+      "svelte-language-server": "svelte",
+      intelephense: "php intelephense",
+      "julia-language-server": "julials",
       bashls: "bash",
       clojure_lsp: "clojure-lsp",
       csharp_ls: "csharp",
@@ -91,6 +140,29 @@ describe("built-in registry", () => {
     }
   });
 
+  it("keeps language IDs out of built-in aliases and adds them through identity alias details", () => {
+    const aliases = Object.fromEntries(getBuiltInServerAliases());
+
+    expect(aliases).not.toMatchObject({
+      javascript: "typescript",
+      jsonc: "json",
+      php: "php intelephense",
+    });
+
+    expect(
+      buildAliasDetails({
+        registryId: builtInServers.typescript.id,
+        languageIds: builtInServers.typescript.languageIds,
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        { value: "typescript", kind: "registry-id" },
+        { value: "javascript", kind: "language-id" },
+        { value: "typescriptreact", kind: "language-id" },
+      ]),
+    );
+  });
+
   it("keeps aliases unique and unambiguous", () => {
     const aliases = getBuiltInServerAliases().map(([alias]) => alias);
 
@@ -98,6 +170,12 @@ describe("built-in registry", () => {
     for (const [alias, canonicalId] of getBuiltInServerAliases()) {
       expect(builtInServers).not.toHaveProperty(alias);
       expect(getBuiltInServer(alias)).toBe(builtInServers[canonicalId]);
+    }
+  });
+
+  it("keeps each built-in metadata aliases array unique", () => {
+    for (const [id, server] of Object.entries(builtInServers)) {
+      expect(server.aliases, `${id} aliases`).toEqual([...new Set(server.aliases)]);
     }
   });
 

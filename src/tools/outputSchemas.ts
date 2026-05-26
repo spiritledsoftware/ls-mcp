@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { serverAliasKinds } from "../lsp/serverIdentity.js";
 import { linkedEditingRangesSchema } from "./generated/lspLinkedEditingRange.js";
 import { monikerSchema } from "./generated/lspMoniker.js";
 import {
@@ -38,12 +39,67 @@ import {
   workspaceSymbolSchema,
 } from "./generated/lspTypes.js";
 
+export const aliasDetailSchema = z
+  .object({
+    value: z.string(),
+    kind: z.enum(serverAliasKinds),
+  })
+  .strict();
+
+export const serverSuggestionSchema = z
+  .object({
+    id: z.string(),
+    score: z.number(),
+    reasons: z.array(z.string()).readonly(),
+    aliases: z.array(z.string()).readonly(),
+    aliasDetails: z.array(aliasDetailSchema).readonly(),
+    registryId: z.string().optional(),
+    configuredId: z.string().optional(),
+    languageIds: z.array(z.string()).readonly(),
+    extensions: z.array(z.string()).readonly(),
+  })
+  .strict();
+
+const installStatusSchema = z
+  .object({
+    status: z.union([z.literal("ready"), z.literal("not-installed"), z.literal("error")]),
+    command: z.string(),
+    args: z.array(z.string()).readonly(),
+    source: z
+      .union([z.literal("configured"), z.literal("system"), z.literal("installed")])
+      .optional(),
+    reason: z.string().optional(),
+  })
+  .strict();
+
+export const serverInfoSchema = z
+  .object({
+    id: z.string(),
+    registryId: z.string().optional(),
+    configuredId: z.string().optional(),
+    kind: z.union([z.literal("managed"), z.literal("system"), z.literal("custom")]),
+    profile: z.union([z.literal("managed"), z.literal("system")]).optional(),
+    command: z.string().optional(),
+    configuredCommand: z.boolean(),
+    args: z.array(z.string()).readonly(),
+    languageIds: z.array(z.string()).readonly(),
+    extensions: z.array(z.string()).readonly(),
+    aliases: z.array(z.string()).readonly(),
+    aliasDetails: z.array(aliasDetailSchema).readonly(),
+    upstream: z.unknown().optional(),
+    install: installStatusSchema,
+    running: z.boolean(),
+  })
+  .strict();
+
 const structuredErrorSchema = z.object({
   ok: z.literal(false),
   error: z.string(),
   code: z.union([z.string(), z.number()]).optional(),
   method: z.string().optional(),
   timeoutMs: z.number().optional(),
+  serverId: z.string().optional(),
+  suggestions: z.array(serverSuggestionSchema).readonly().optional(),
 });
 
 const changedFileSchema = z.object({
@@ -178,7 +234,7 @@ export const editToolOutputSchemas = {
 
 export const serverStatusOutputSchema = z.object({
   ok: z.literal(true),
-  servers: z.array(z.record(z.string(), z.unknown())),
+  servers: z.array(serverInfoSchema),
   sessions: z.array(z.record(z.string(), z.unknown())),
 });
 

@@ -2,7 +2,7 @@
 title: Verification and Release Readiness
 summary: The release was validated by lint, typecheck, tests, build, format checks, and package dry-runs, with no blocker/high/medium issues remaining.
 tags: []
-related: []
+related: [facts/project/project_context_snapshot.md, facts/project/context_and_plan_execution_notes.md, facts/project/lsp_mcp_server_implementation_details.md, facts/project/lsp_mcp_server_knowledge.md]
 keywords: []
 createdAt: '2026-05-24T21:20:18.491Z'
 updatedAt: '2026-05-24T21:20:18.491Z'

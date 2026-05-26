@@ -95,15 +95,23 @@ describe("server lifecycle tools", () => {
       }),
     });
 
-    const result = await callTool(registry, "lsp_list_servers", {});
+    const result = await callTool(registry, "list_servers", {});
 
     expect(factory).not.toHaveBeenCalled();
     expect(result).toMatchObject({ ok: true });
     expect(result.servers.map((server: { id: string }) => server.id)).toEqual(
-      expect.arrayContaining(["ts", "custom", "json", "pyright"]),
+      expect.arrayContaining([
+        "typescript-language-server",
+        "custom",
+        "vscode-json-language-server",
+        "pyright-langserver",
+      ]),
     );
-    expect(result.servers.find((server: { id: string }) => server.id === "ts")).toMatchObject({
-      id: "ts",
+    expect(
+      result.servers.find((server: { id: string }) => server.id === "typescript-language-server"),
+    ).toMatchObject({
+      id: "typescript-language-server",
+      configuredId: "ts",
       registryId: "typescript",
       kind: "managed",
       install: { status: "error" },
@@ -112,6 +120,207 @@ describe("server lifecycle tools", () => {
     expect(result.servers.find((server: { id: string }) => server.id === "custom")).toMatchObject({
       kind: "custom",
       running: false,
+    });
+  });
+
+  it("searches servers by canonical ID, command, aliases, language, and extension", async () => {
+    const { workspaceRoot, filePath } = await createWorkspace();
+    const factory = vi.fn(() => new FakeSession());
+    const config = {
+      lsp: {
+        servers: {
+          ts: { registry: "typescript", command: process.execPath },
+          yaml: { registry: "yaml-ls", command: process.execPath },
+        },
+      },
+    };
+    const registry = createToolRegistry({
+      config,
+      sessionManager: new LspSessionManager({ config, sessionFactory: factory }),
+    });
+
+    const canonical = await callTool(registry, "search_servers", {
+      workspaceRoot,
+      filePath,
+      query: "typescript-language-server",
+      limit: 1,
+    });
+    const command = await callTool(registry, "search_servers", {
+      workspaceRoot,
+      query: "typescript-language-server",
+    });
+    const alias = await callTool(registry, "search_servers", { workspaceRoot, query: "ts_ls" });
+    const language = await callTool(registry, "search_servers", {
+      workspaceRoot,
+      query: "typescript",
+      filePath,
+    });
+    const extension = await callTool(registry, "search_servers", { workspaceRoot, query: "yaml" });
+
+    expect(factory).not.toHaveBeenCalled();
+    expect(canonical.matches).toEqual([
+      expect.objectContaining({ id: "typescript-language-server", score: expect.any(Number) }),
+    ]);
+    expect(command.matches[0]).toMatchObject({ id: "typescript-language-server" });
+    expect(alias.matches[0]).toMatchObject({ id: "typescript-language-server" });
+    expect(language.matches[0]).toMatchObject({ id: "typescript-language-server" });
+    expect(extension.matches[0]).toMatchObject({ id: "yaml-language-server" });
+  });
+
+  it("down-ranks activation-inactive search matches", async () => {
+    const { workspaceRoot, filePath } = await createWorkspace();
+    const registry = createToolRegistry({ config: {} });
+
+    const withoutDenoMarker = await callTool(registry, "search_servers", {
+      workspaceRoot,
+      filePath,
+      query: "deno",
+    });
+
+    await writeFile(join(workspaceRoot, "deno.json"), "{}\n", "utf8");
+
+    const withDenoMarker = await callTool(registry, "search_servers", {
+      workspaceRoot,
+      filePath,
+      query: "deno",
+    });
+
+    expect(withoutDenoMarker.matches[0]).toMatchObject({
+      id: "deno-language-server",
+      reasons: expect.arrayContaining(["activation does not apply"]),
+    });
+    expect(withDenoMarker.matches[0]).toMatchObject({
+      id: "deno-language-server",
+      reasons: expect.arrayContaining(["activation applies"]),
+    });
+    expect(withDenoMarker.matches[0].score).toBeGreaterThan(withoutDenoMarker.matches[0].score);
+  });
+
+  it("filters listed servers by workspace file context without starting sessions", async () => {
+    const { workspaceRoot, filePath } = await createWorkspace();
+    const factory = vi.fn(() => new FakeSession());
+    const config = {
+      lsp: {
+        servers: {
+          ts: { registry: "typescript", command: process.execPath },
+          json: { registry: "json", command: process.execPath },
+          custom: { command: process.execPath, languageIds: ["custom"], extensions: [".custom"] },
+        },
+      },
+    };
+    const registry = createToolRegistry({
+      config,
+      sessionManager: new LspSessionManager({ config, sessionFactory: factory }),
+    });
+
+    const result = await callTool(registry, "list_servers", { workspaceRoot, filePath });
+
+    expect(factory).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: true });
+    expect(result.servers.map((server: { id: string }) => server.id)).toEqual([
+      "typescript-language-server",
+    ]);
+  });
+
+  it("filters listed servers by language without starting sessions", async () => {
+    const { workspaceRoot } = await createWorkspace();
+    const factory = vi.fn(() => new FakeSession());
+    const config = {
+      lsp: {
+        servers: {
+          ts: { registry: "typescript", command: process.execPath },
+          json: { registry: "json", command: process.execPath },
+        },
+      },
+    };
+    const registry = createToolRegistry({
+      config,
+      sessionManager: new LspSessionManager({ config, sessionFactory: factory }),
+    });
+
+    const result = await callTool(registry, "list_servers", { workspaceRoot, languageId: "json" });
+
+    expect(factory).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: true });
+    expect(result.servers.map((server: { id: string }) => server.id)).toEqual([
+      "vscode-json-language-server",
+    ]);
+  });
+
+  it("filters listed servers by server ID aliases without starting sessions", async () => {
+    const { workspaceRoot } = await createWorkspace();
+    const factory = vi.fn(() => new FakeSession());
+    const config = {
+      lsp: {
+        servers: {
+          ts: { registry: "typescript", command: process.execPath },
+          json: { registry: "json", command: process.execPath },
+        },
+      },
+    };
+    const registry = createToolRegistry({
+      config,
+      sessionManager: new LspSessionManager({ config, sessionFactory: factory }),
+    });
+
+    const result = await callTool(registry, "list_servers", { workspaceRoot, serverId: "ts" });
+
+    expect(factory).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ ok: true });
+    expect(result.servers).toEqual([
+      expect.objectContaining({ id: "typescript-language-server", configuredId: "ts" }),
+    ]);
+  });
+
+  it("returns an empty list when a known server ID does not match file context", async () => {
+    const { workspaceRoot, filePath } = await createWorkspace();
+    const registry = createToolRegistry({ config: {} });
+
+    const result = await callTool(registry, "list_servers", {
+      workspaceRoot,
+      filePath,
+      serverId: "json",
+    });
+
+    expect(result).toEqual({ ok: true, servers: [] });
+  });
+
+  it("returns structured errors for unknown list server IDs", async () => {
+    const { workspaceRoot } = await createWorkspace();
+    const registry = createToolRegistry({ config: {} });
+
+    const result = await callTool(registry, "list_servers", {
+      workspaceRoot,
+      serverId: "typescrip",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "unknown_server",
+      serverId: "typescrip",
+      suggestions: expect.arrayContaining([
+        expect.objectContaining({ id: "typescript-language-server" }),
+      ]),
+    });
+  });
+
+  it("returns structured errors for ambiguous list server IDs", async () => {
+    const { workspaceRoot } = await createWorkspace();
+    const registry = createToolRegistry({ config: { lsp: { servers: {} } } });
+
+    const result = await callTool(registry, "list_servers", {
+      workspaceRoot,
+      serverId: "javascript",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "ambiguous_server",
+      serverId: "javascript",
+      suggestions: expect.arrayContaining([
+        expect.objectContaining({ id: "typescript-language-server" }),
+        expect.objectContaining({ id: "deno-language-server" }),
+      ]),
     });
   });
 
@@ -126,14 +335,15 @@ describe("server lifecycle tools", () => {
       }),
     });
 
-    const result = await callTool(registry, "lsp_server_status", { workspaceRoot, filePath });
+    const result = await callTool(registry, "server_status", { workspaceRoot, filePath });
 
     expect(factory).not.toHaveBeenCalled();
     expect(result).toMatchObject({ ok: true });
     expect(result.sessions).toEqual([]);
     expect(result.servers).toEqual([
       expect.objectContaining({
-        id: "ts",
+        id: "typescript-language-server",
+        configuredId: "ts",
         running: false,
         install: expect.objectContaining({ status: "ready" }),
       }),
@@ -164,7 +374,7 @@ describe("server lifecycle tools", () => {
       sessionManager: new LspSessionManager({ config, sessionFactory: factory }),
     });
 
-    const result = await callTool(registry, "lsp_server_status", {
+    const result = await callTool(registry, "server_status", {
       workspaceRoot,
       filePath,
       serverId: "envTs",
@@ -172,7 +382,8 @@ describe("server lifecycle tools", () => {
 
     expect(factory).not.toHaveBeenCalled();
     expect(result.servers[0]).toMatchObject({
-      id: "envTs",
+      id: "typescript-language-server",
+      configuredId: "envTs",
       install: { status: "ready", command: "env-only-ls" },
     });
   });
@@ -204,7 +415,7 @@ describe("server lifecycle tools", () => {
         sessionManager: new LspSessionManager({ config, sessionFactory: factory }),
       });
 
-      const result = await callTool(registry, "lsp_server_status", {
+      const result = await callTool(registry, "server_status", {
         workspaceRoot,
         filePath,
         serverId: "ts",
@@ -212,7 +423,8 @@ describe("server lifecycle tools", () => {
 
       expect(factory).not.toHaveBeenCalled();
       expect(result.servers[0]).toMatchObject({
-        id: "ts",
+        id: "typescript-language-server",
+        configuredId: "ts",
         install: { status: "ready", source: "installed", command: cachedCommand },
       });
     } finally {
@@ -235,7 +447,7 @@ describe("server lifecycle tools", () => {
     const registry = createToolRegistry({ config: {}, sessionManager: manager });
 
     await manager.getSessionsForFile({ workspaceRoot, filePath });
-    const result = await callTool(registry, "lsp_server_status", {
+    const result = await callTool(registry, "server_status", {
       workspaceRoot,
       serverId: "ts",
     });
@@ -243,7 +455,7 @@ describe("server lifecycle tools", () => {
     expect(result).toMatchObject({ ok: true });
     expect(result.sessions).toMatchObject([
       expect.objectContaining({
-        serverId: "ts",
+        serverId: "typescript-language-server",
         running: true,
         process: { state: "running", exitCode: null, signal: null },
         capabilities: expect.objectContaining({ hover: true, completion: true }),
@@ -271,11 +483,36 @@ describe("server lifecycle tools", () => {
 
     await manager.getSessionsForWorkspace({ workspaceRoot, serverId: "ts" });
     await manager.getSessionsForWorkspace({ workspaceRoot, serverId: "json" });
-    const result = await callTool(registry, "lsp_server_status", { workspaceRoot, filePath });
+    const result = await callTool(registry, "server_status", { workspaceRoot, filePath });
 
-    expect(result.servers.map((server: { id: string }) => server.id)).toEqual(["ts"]);
+    expect(result.servers.map((server: { id: string }) => server.id)).toEqual([
+      "typescript-language-server",
+    ]);
     expect(result.sessions.map((session: { serverId: string }) => session.serverId)).toEqual([
-      "ts",
+      "typescript-language-server",
+    ]);
+  });
+
+  it("reports running sessions for context-resolved language aliases", async () => {
+    const { workspaceRoot, filePath } = await createWorkspace();
+    const manager = new LspSessionManager({
+      config: { lsp: { servers: {} } },
+      sessionFactory: () => new FakeSession(),
+    });
+    const registry = createToolRegistry({ config: {}, sessionManager: manager });
+
+    await manager.getSessionsForFile({ workspaceRoot, filePath, serverId: "typescript" });
+    const result = await callTool(registry, "server_status", {
+      workspaceRoot,
+      filePath,
+      serverId: "javascript",
+    });
+
+    expect(result.servers.map((server: { id: string }) => server.id)).toEqual([
+      "typescript-language-server",
+    ]);
+    expect(result.sessions.map((session: { serverId: string }) => session.serverId)).toEqual([
+      "typescript-language-server",
     ]);
   });
 
@@ -296,11 +533,11 @@ describe("server lifecycle tools", () => {
     const registry = createToolRegistry({ config: {}, sessionManager: manager });
 
     await manager.getSessionsForFile({ workspaceRoot, filePath, serverId: "ts" });
-    const stopped = await callTool(registry, "lsp_stop_server", {
+    const stopped = await callTool(registry, "stop_server", {
       workspaceRoot: join(workspaceRoot, "."),
       serverId: "ts",
     });
-    const notRunning = await callTool(registry, "lsp_stop_server", {
+    const notRunning = await callTool(registry, "stop_server", {
       workspaceRoot,
       serverId: "ts",
     });
@@ -332,14 +569,14 @@ describe("server lifecycle tools", () => {
 
     await manager.getSessionsForWorkspace({ workspaceRoot, serverId: "ts" });
     await manager.getSessionsForWorkspace({ workspaceRoot, serverId: "json" });
-    const result = await callTool(registry, "lsp_stop_workspace", {
+    const result = await callTool(registry, "stop_workspace", {
       workspaceRoot: join(workspaceRoot, "."),
     });
 
     expect(result).toMatchObject({ ok: true, workspaceRoot, stoppedCount: 2 });
     expect(result.stopped.map((entry: { serverId: string }) => entry.serverId).sort()).toEqual([
-      "json",
-      "ts",
+      "typescript-language-server",
+      "vscode-json-language-server",
     ]);
     expect(manager.activeSessionCount).toBe(0);
   });

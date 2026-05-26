@@ -81,7 +81,7 @@ describe("end-to-end smoke tests", () => {
     expect(await hoverRequestCount(eventLogs.alpha)).toBe(hoverCountsBeforeTargeting.alpha);
     expect(await hoverRequestCount(eventLogs.beta)).toBe(hoverCountsBeforeTargeting.beta + 1);
 
-    const preview = await callTool(registry, "lsp_format_document", {
+    const preview = await callTool(registry, "format_document", {
       workspaceRoot,
       filePath,
       serverId: "alpha",
@@ -94,7 +94,7 @@ describe("end-to-end smoke tests", () => {
       message: "Edits were returned but not applied. Re-run with apply: true to modify files.",
     });
 
-    const applied = await callTool(registry, "lsp_format_document", {
+    const applied = await callTool(registry, "format_document", {
       workspaceRoot,
       filePath,
       serverId: "alpha",
@@ -104,7 +104,7 @@ describe("end-to-end smoke tests", () => {
     await expect(readFile(filePath, "utf8")).resolves.toBe("const alphaFormatted = 1;\n");
     expect(applied.results.alpha).toMatchObject({ ok: true, applied: true });
 
-    const command = await callTool(registry, "lsp_execute_command", {
+    const command = await callTool(registry, "execute_command", {
       workspaceRoot,
       filePath,
       serverId: "alpha",
@@ -119,7 +119,7 @@ describe("end-to-end smoke tests", () => {
       },
     });
 
-    const outsideEdit = await callTool(registry, "lsp_code_actions", {
+    const outsideEdit = await callTool(registry, "code_actions", {
       workspaceRoot,
       filePath,
       serverId: "alpha",

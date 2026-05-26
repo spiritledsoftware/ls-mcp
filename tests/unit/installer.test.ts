@@ -21,6 +21,7 @@ function addSyntheticGitHubServer(id: string): BuiltInServerMetadata & {
 } {
   const metadata = {
     id,
+    serverId: id,
     languages: ["example"],
     languageIds: ["example"],
     extensions: [".example"],
@@ -463,6 +464,7 @@ describe("installGitHubServer", () => {
     const installDir = await makeTempDir();
     const metadata = {
       id: "example-ls",
+      serverId: "example-ls",
       languages: ["example"],
       languageIds: ["example"],
       extensions: [".example"],

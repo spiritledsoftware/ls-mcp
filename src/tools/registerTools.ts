@@ -27,6 +27,8 @@ import {
   lspServersSchema,
   lspStopServerInputSchema,
   lspStopWorkspaceInputSchema,
+  searchServersInputSchema,
+  searchServersSchema,
   type LspServers,
 } from "./serverTools.js";
 import { createStandardToolHandler } from "./standardTools.js";
@@ -37,7 +39,7 @@ export { lspServersSchema, type LspServers } from "./serverTools.js";
 export async function listLspServers(): Promise<LspServers> {
   const registry = createToolRegistry();
   return (await registry.tools
-    .find((tool) => tool.name === "lsp_list_servers")!
+    .find((tool) => tool.name === "list_servers")!
     .handler({})) as LspServers;
 }
 
@@ -65,6 +67,20 @@ export interface ToolRegistryOptions {
   documentStore?: DocumentStore;
   diagnosticStore?: DiagnosticStore;
 }
+
+const rawPublicToolNames = {
+  lsp_execute_command: "execute_command",
+  lsp_request: "request",
+  lsp_notify: "notify",
+} as const satisfies Record<keyof typeof rawToolDescriptors, string>;
+
+const editPublicToolNames = {
+  lsp_rename: "rename",
+  lsp_format_document: "format_document",
+  lsp_format_range: "format_range",
+  lsp_format_on_type: "format_on_type",
+  lsp_code_actions: "code_actions",
+} as const satisfies Record<keyof typeof editToolDescriptors, string>;
 
 export async function createConfiguredToolRegistry(): Promise<ToolRegistry> {
   const { config } = await loadConfig();
@@ -162,7 +178,7 @@ export function createToolRegistry(options: ToolRegistryOptions = {}): ToolRegis
     shutdown: () => sessionManager.shutdownAll(),
     tools: [
       {
-        name: "lsp_list_servers",
+        name: "list_servers",
         title: "List LSP servers",
         description: "Lists configured and built-in LSP servers without starting them.",
         inputSchema: lspServersInputSchema,
@@ -170,7 +186,7 @@ export function createToolRegistry(options: ToolRegistryOptions = {}): ToolRegis
         handler: serverHandlers.listServers,
       },
       {
-        name: "lsp_server_status",
+        name: "server_status",
         title: "Get LSP server status",
         description: "Reports install, runtime, health, capability, and idle status.",
         inputSchema: lspServerStatusInputSchema,
@@ -178,7 +194,16 @@ export function createToolRegistry(options: ToolRegistryOptions = {}): ToolRegis
         handler: serverHandlers.serverStatus,
       },
       {
-        name: "lsp_stop_server",
+        name: "search_servers",
+        title: "Search LSP servers",
+        description:
+          "Searches configured and built-in LSP servers by ID, alias, language, and command.",
+        inputSchema: searchServersInputSchema,
+        outputSchema: searchServersSchema,
+        handler: serverHandlers.searchServers,
+      },
+      {
+        name: "stop_server",
         title: "Stop an LSP server",
         description: "Stops one running LSP session for a workspace and server ID.",
         inputSchema: lspStopServerInputSchema,
@@ -186,7 +211,7 @@ export function createToolRegistry(options: ToolRegistryOptions = {}): ToolRegis
         handler: serverHandlers.stopServer,
       },
       {
-        name: "lsp_stop_workspace",
+        name: "stop_workspace",
         title: "Stop workspace LSP servers",
         description: "Stops all running LSP sessions for a workspace.",
         inputSchema: lspStopWorkspaceInputSchema,
@@ -194,7 +219,7 @@ export function createToolRegistry(options: ToolRegistryOptions = {}): ToolRegis
         handler: serverHandlers.stopWorkspace,
       },
       ...Object.entries(rawToolDescriptors).map(([name, descriptor]) => ({
-        name,
+        name: rawPublicToolNames[name as keyof typeof rawToolDescriptors],
         title: descriptor.title,
         description: descriptor.description,
         inputSchema: descriptor.inputSchema,
@@ -203,7 +228,7 @@ export function createToolRegistry(options: ToolRegistryOptions = {}): ToolRegis
           rawHandler(name as keyof typeof rawToolDescriptors, input, context),
       })),
       {
-        name: "lsp_diagnostics",
+        name: "diagnostics",
         title: "Get diagnostics",
         description: "Returns diagnostics from matching LSP servers.",
         inputSchema: lspDiagnosticsInputSchema,
@@ -211,7 +236,7 @@ export function createToolRegistry(options: ToolRegistryOptions = {}): ToolRegis
         handler: diagnosticsHandler,
       },
       ...Object.entries(editToolDescriptors).map(([name, descriptor]) => ({
-        name,
+        name: editPublicToolNames[name as keyof typeof editToolDescriptors],
         title: descriptor.title,
         description: descriptor.description,
         inputSchema: descriptor.inputSchema,

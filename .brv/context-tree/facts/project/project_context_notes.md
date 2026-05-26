@@ -1,18 +1,18 @@
 ---
 title: Project Context Notes
-summary: High-level project facts covering the LSP MCP server, source areas, planning docs, test coverage, and curation timestamp.
+summary: Project context notes covering LSP MCP server plans, interface cleanup, output schemas, and Mason-backed registry work.
 tags: []
-related: []
+related: [facts/project/current_runtime_timestamp.md, project_context_notes.md, lsp_mcp_server_knowledge.md, lsp_output_schemas_plan_and_generation.md, mason_backed_lsp_registry_implementation.md]
 keywords: []
 createdAt: '2026-05-25T20:08:53.220Z'
-updatedAt: '2026-05-25T20:19:37.819Z'
+updatedAt: '2026-05-26T15:58:39.697Z'
 ---
 ## Reason
-Curate high-level project knowledge from the supplied context into durable facts
+Curate project context notes from current RLM context
 
 ## Raw Concept
 **Task:**
-Document the current project context for the nimble-wizard repository.
+Document the current project context and plan-oriented notes from the curated context snapshot.
 
 **Changes:**
 - Documented CI/CD planning and release automation work
@@ -21,6 +21,11 @@ Document the current project context for the nimble-wizard repository.
 - Captured the main project scope around an LSP MCP server.
 - Recorded the major source directories and testing surface.
 - Preserved the curation timestamp supplied with the task.
+- Documented the Mason-backed LSP registry plan and output schema generation work
+- Captured implementation details for registry adapters, vendoring, and installer strategy
+- Recorded the LSP MCP server plan and verification/release readiness notes
+- Captured multiple project plans and context notes related to LSP and MCP work
+- Preserved the current date reference for the curated snapshot
 
 **Files:**
 - docs/plans/2026-05-25-ci-cd.md
@@ -36,29 +41,26 @@ Document the current project context for the nimble-wizard repository.
 - src/tools/
 - src/utils/
 - tests/integration/
+- src/registry/masonSnapshot.ts
+- src/registry/githubInstaller.ts
+- src/registry/npmInstaller.ts
+- src/registry/installer.ts
+- src/registry/builtins.ts
+- scripts/generate-lsp-output-schemas.mjs
 
 **Flow:**
-context provided -> key facts extracted -> durable project knowledge curated
+context snapshot -> identify project notes -> extract facts -> curate durable knowledge
 
-**Timestamp:** 2026-05-25T20:19:28.772Z
+**Timestamp:** 2026-05-26T15:58:28.070Z
+
+**Author:** project context
 
 ## Narrative
 ### Structure
-The repository is organized around documentation, source code, and integration tests, with docs/plans capturing recent design work.
+The context snapshot centers on project notes and plans, especially around LSP MCP server implementation, interface cleanup, output schemas, and registry strategy.
 
 ### Dependencies
-Knowledge spans LSP/MCP behavior, registry tooling, configuration, security, and tool-generation concerns.
+These notes depend on the broader nimble-wizard project context and existing curated LSP/MCP knowledge.
 
 ### Highlights
-The context emphasizes an LSP MCP server and a wide integration-test surface, suggesting a tooling-heavy project with active planning artifacts.
-
-### Examples
-Relevant topics include CI/CD, output schema generation, registry strategy, and implementation details for the MCP server.
-
-## Facts
-- **context_scope**: Context discusses docs/plans/2026-05-25-mason-backed-lsp-registry.md, src/registry/installer.ts, src/registry/npmInstaller.ts, src/registry/githubInstaller.ts, Mason, src/registry/builtins.ts, src/registry/masonSnapshot.ts, tests/unit/installer.test.ts [project]
-- **lsp_mcp_server**: Project context documents an LSP MCP server, related tooling, and implementation details. [project]
-- **planning_docs**: The repository includes docs/plans for CI/CD, LSP output schemas, and a Mason-backed LSP registry. [project]
-- **source_areas**: Source areas include config, lsp, mcp, registry, security, tools, and utils. [project]
-- **test_coverage**: Tests include integration coverage for diagnostics, document open, edit tools, execute command, lazy startup, raw tools, server tools, session, standard tools, and timeout cancellation. [project]
-- **curation_timestamp**: The current date-time supplied for this curation is 2026-05-25T20:19:28.772Z. [project]
+The snapshot indicates active planning and cleanup work across LSP and MCP-related areas.

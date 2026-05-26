@@ -4,15 +4,21 @@ on:
   push:
     branches:
       - main
-
-concurrency:
-  group: release-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
   id-token: write
+
+env:
+  # CI runs explicit quality gates; do not let Changesets' git pushes invoke
+  # Husky pre-push and start another pnpm verify in the release workspace.
+  HUSKY: 0
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:

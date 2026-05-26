@@ -1,48 +1,50 @@
 ---
 title: Current Runtime Timestamp
-summary: Stores the current runtime timestamp and concise project context extracted from the supplied RLM context.
+summary: The current runtime timestamp is 2026-05-26T10:04:55.754Z for this session.
 tags: []
 related: []
 keywords: []
-createdAt: '2026-05-25T09:22:00.290Z'
-updatedAt: '2026-05-25T20:16:05.978Z'
+createdAt: '2026-05-26T09:41:21.407Z'
+updatedAt: '2026-05-26T10:05:04.417Z'
 ---
 ## Reason
-Curate current runtime timestamp and project context notes from RLM input
+Record the runtime timestamp supplied in the curate context as a durable fact.
 
 ## Raw Concept
 **Task:**
-Curate provided RLM context into durable project knowledge
+Capture the current runtime timestamp for this session
 
 **Changes:**
-- Captured the provided timestamp as a durable fact
-- Recorded current runtime timestamp
-- Recorded curation recon metadata
-- Captured runtime timestamp
-- Extracted concise line-level project facts from the provided context
+- Captured the current timestamp for this session
+- Recorded the single-pass curation instruction
+- Preserved the verification constraint for curated results
+- Captured the runtime timestamp from the prompt context
+- Captured the session timestamp provided at request time.
+- Captured the provided current date and time as an absolute ISO 8601 timestamp.
+- Captured the exact current date and time from the request payload
+- Captured the current timestamp from the context.
+- Added the exact ISO 8601 timestamp provided in the curate request
 
 **Flow:**
-receive curated context -> extract durable facts -> upsert into context tree
+timestamp supplied -> normalize as ISO 8601 fact -> curate into facts/project
 
-**Timestamp:** 2026-05-25T20:15:57.000Z
+**Timestamp:** 2026-05-26T10:04:55.754Z
+
+**Author:** system
 
 ## Narrative
 ### Structure
-This entry records runtime context facts and extracted project statements from the supplied curation input.
+A single timestamp fact stored as a project-level knowledge entry for session reference.
 
 ### Dependencies
-Depends on the current task metadata provided to the curator.
+Depends on the injected curate context, history, metadata, and task ID variables supplied by the caller.
 
 ### Highlights
-Includes the current timestamp and a compact set of line-derived factual statements for recall.
+Preserves the exact runtime timestamp for recall and temporal reasoning.
 
 ## Facts
-- **current_runtime_timestamp**: Current date and time: 2026-05-25T20:15:57.000Z [environment]
-- **curate_only_information_with_lasting_value**: Curate only information with lasting value: facts, decisions, technical details, preferences, or notable outcomes. [project]
-- **_user_**: [user]: Re-review code quality for the registry/session alias fix. The prior finding was that aliases resolved as registry IDs but not explicit `serverId` targets. Verify that is fixed and look for regressions. [project]
-- **_assistant_**: [assistant]: APPROVED [project]
-- **correct**: Correct: `src/lsp/sessionManager.ts:442-449` now resolves user-supplied `serverId` through `getBuiltInServer(serverId)` and matches definitions by canonical registry metadata, so aliases like `python`, `go`, `yaml`, `ts_ls`, and `yamlls` can target configured or built-in canonical servers. [project]
-- **correct**: Correct: `src/lsp/sessionManager.ts:297-318`, `360-400` apply alias resolution across active session listing, stop, file-targeted sessions, workspace-targeted sessions, and status paths. [project]
-- **correct**: Correct: `src/registry/builtins.ts:447-493` builds a validated alias map and rejects alias/id conflicts or ambiguous aliases. [project]
-- **correct**: Correct: related tests cover the prior regression: [project]
-- **_tests_unit_sessionmanager_test_ts**: `tests/unit/sessionManager.test.ts: 162-220` covers file sessions, workspace sessions, status listing, and stopping via aliases. [project]
+- **current_runtime_timestamp**: Current date and time is 2026-05-26T10:04:55.754Z [project]
+
+---
+
+Preserve the existing runtime fact history, but add a chronological narrative: earliest timestamped context in current_runtime_timestamp.md, followed by the later 2026-05-26 planning snapshot in context_and_plan_execution_notes.md. Keep both timestamps, note that the newer note supersedes the earlier runtime reference for current planning context, and explicitly distinguish historical context from current state.

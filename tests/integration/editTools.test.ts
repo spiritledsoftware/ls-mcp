@@ -93,6 +93,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
     });
@@ -118,6 +119,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
     });
@@ -136,6 +138,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
     });
@@ -194,6 +197,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
     });
@@ -474,6 +478,48 @@ describe("edit-producing tools", () => {
     });
   });
 
+  it("normalizes command allowlist aliases before executing code action commands", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile("const value = 1;\n");
+    const actions = [
+      {
+        title: "Fix all",
+        kind: "quickfix",
+        command: { command: "source.fixAll.ts", title: "Fix all" },
+      },
+    ];
+    const session = createSession(
+      { "textDocument/codeAction": actions, "workspace/executeCommand": { fixed: true } },
+      { codeActionProvider: true },
+    );
+    const handler = createEditToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => [
+          acquired("typescript-language-server", session, workspaceRoot),
+        ]),
+        resolveServerId: vi.fn((serverId: string) =>
+          serverId === "typescript" ? "typescript-language-server" : serverId,
+        ),
+      },
+      documentStore: new DocumentStore(),
+      config: { commands: { allow: { typescript: ["source.fixAll.ts"] } } },
+    });
+
+    const applied = await handler("lsp_code_actions", {
+      workspaceRoot,
+      filePath,
+      startLine: 1,
+      startCharacter: 1,
+      endLine: 1,
+      endCharacter: 6,
+      apply: true,
+    });
+
+    expect(applied.results["typescript-language-server"]).toMatchObject({
+      ok: true,
+      command: { ok: true, result: { fixed: true } },
+    });
+  });
+
   it("reports blocked code action commands clearly after applying edit portion", async () => {
     const { workspaceRoot, filePath } = await createWorkspaceFile("const value = 1;\n");
     const actions = [
@@ -500,6 +546,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
       config: { commands: { allow: { ts: ["source.organizeImports.ts"] } } },
@@ -613,6 +660,7 @@ describe("edit-producing tools", () => {
     const handler = createEditToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session, workspaceRoot)]),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       documentStore: new DocumentStore(),
       config: { commands: { allow: { ts: ["source.organizeImports.ts"] } } },

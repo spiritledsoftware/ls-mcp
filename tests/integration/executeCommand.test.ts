@@ -34,13 +34,14 @@ function acquired(serverId: string, session: ManagedLspSession): AcquiredLspSess
   };
 }
 
-describe("lsp_execute_command", () => {
+describe("execute_command", () => {
   it("calls workspace/executeCommand on a matching fake server", async () => {
     const session = createSession({ ok: true });
     const handler = createRawToolHandler({
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session)]),
         getSessionsForWorkspace: vi.fn(async () => []),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       config: {},
     });
@@ -70,6 +71,7 @@ describe("lsp_execute_command", () => {
       sessionManager: {
         getSessionsForFile: vi.fn(async () => [acquired("ts", session)]),
         getSessionsForWorkspace: vi.fn(async () => []),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       config: { commands: { allow: { ts: ["source.fixAll.ts"] } } },
     });
@@ -132,6 +134,7 @@ describe("lsp_execute_command", () => {
           acquired("blocked", blocked),
         ]),
         getSessionsForWorkspace: vi.fn(async () => []),
+        resolveServerId: vi.fn((serverId: string) => serverId),
       },
       config: { commands: { allow: { blocked: ["source.organizeImports.ts"] } } },
     });

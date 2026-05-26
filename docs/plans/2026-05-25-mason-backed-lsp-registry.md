@@ -4,7 +4,7 @@
 
 ## Goal
 
-Support the LSP servers documented by opencode out of the box while avoiding a fully hand-written and quickly stale registry. Use Mason registry data as an upstream development-time source for package metadata and aliases, but keep `ls-mcp`'s runtime registry deterministic, offline, and product-owned.
+Support the LSP servers documented by opencode out of the box while avoiding a fully hand-written and quickly stale registry. Use Mason registry data as an upstream development-time source for package metadata and aliases, but keep `language-server-mcp`'s runtime registry deterministic, offline, and product-owned.
 
 ## Locked Decisions
 
@@ -28,7 +28,7 @@ The built-in registry is assembled from three layers:
 2. **Mason snapshot**: hand-curated static metadata from selected Mason package specs.
 3. **Installer adapters**: npm first, selected archive/download support, and system-only fallback where needed.
 
-The overlay remains the source of truth for what `ls-mcp` supports and how each LSP server starts. The Mason snapshot supplies upstream package information without controlling runtime behavior.
+The overlay remains the source of truth for what `language-server-mcp` supports and how each LSP server starts. The Mason snapshot supplies upstream package information without controlling runtime behavior.
 
 ## Supported Server Coverage
 
@@ -165,4 +165,4 @@ Request final code review after all tasks pass.
 
 ## Expected Outcome
 
-`ls-mcp` supports opencode's built-in LSP server set with Mason-compatible aliases, deterministic package metadata, less hand-maintained registry drift, and clear behavior for managed, system-only, and activation-gated servers.
+`language-server-mcp` supports opencode's built-in LSP server set with Mason-compatible aliases, deterministic package metadata, less hand-maintained registry drift, and clear behavior for managed, system-only, and activation-gated servers.

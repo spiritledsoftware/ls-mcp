@@ -2,7 +2,7 @@
 title: Context and Plan Execution Notes
 summary: Project context covering LSP MCP server implementation, plan execution notes, and curated knowledge workflow with current runtime timestamp.
 tags: []
-related: [facts/project/project_context_snapshot.md, facts/project/verification_and_release_readiness.md, facts/project/lsp_output_schemas_plan_and_generation.md, facts/project/lsp_mcp_server_knowledge.md, facts/project/lsp_registry_and_download_strategy.md]
+related: [facts/project/project_context_snapshot.md, facts/project/verification_and_release_readiness.md, facts/project/lsp_output_schemas_plan_and_generation.md, facts/project/lsp_mcp_server_knowledge.md, facts/project/lsp_registry_and_download_strategy.md, facts/project/mason_backed_lsp_registry_implementation.md, facts/project/curated_context_notes_workflow.md, facts/project/lsp_mcp_server_implementation_details.md]
 keywords: []
 createdAt: '2026-05-25T19:51:57.423Z'
 updatedAt: '2026-05-26T09:22:19.746Z'

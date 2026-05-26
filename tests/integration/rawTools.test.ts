@@ -177,6 +177,37 @@ describe("raw LSP request and notify tools", () => {
     });
   });
 
+  it("normalizes command allowlist aliases before executing canonical server commands", async () => {
+    const session = createSession({ fixed: true });
+    const resolveServerId = vi.fn((serverId: string) =>
+      serverId === "typescript" ? "typescript-language-server" : serverId,
+    );
+    const handler = createRawToolHandler({
+      sessionManager: {
+        getSessionsForFile: vi.fn(async () => [acquired("typescript-language-server", session)]),
+        getSessionsForWorkspace: vi.fn(async () => []),
+        resolveServerId,
+      },
+      config: { commands: { allow: { typescript: ["source.fixAll.ts"] } } },
+    });
+
+    const result = await handler("lsp_execute_command", {
+      workspaceRoot: "/workspace",
+      filePath: "/workspace/app.ts",
+      serverId: "typescript",
+      command: "source.fixAll.ts",
+    });
+
+    expect(resolveServerId).toHaveBeenCalledWith("typescript");
+    expect(session.requests).toEqual([
+      { method: "workspace/executeCommand", params: { command: "source.fixAll.ts" } },
+    ]);
+    expect(result.results["typescript-language-server"]).toEqual({
+      ok: true,
+      result: { fixed: true },
+    });
+  });
+
   it("sends raw notify method and params unchanged", async () => {
     const params = { uri: "file:///workspace/app.ts", type: 1, message: "hello" };
     const session = createSession();

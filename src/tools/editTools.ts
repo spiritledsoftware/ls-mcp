@@ -20,7 +20,8 @@ export const EDITS_NOT_APPLIED_MESSAGE =
   "Edits were returned but not applied. Re-run with apply: true to modify files.";
 
 export interface EditToolHandlerOptions {
-  sessionManager: Pick<LspSessionManager, "getSessionsForFile">;
+  sessionManager: Pick<LspSessionManager, "getSessionsForFile"> &
+    Partial<Pick<LspSessionManager, "resolveServerId">>;
   documentStore: DocumentStore;
   security?: WorkspaceSecurityOptions;
   config?: Pick<LspMcpConfig, "commands">;
@@ -67,6 +68,14 @@ export const editToolInputSchemas = {
 } as const;
 
 type EditToolName = keyof typeof editToolInputSchemas;
+
+const editPublicToolNames = {
+  lsp_rename: "rename",
+  lsp_format_document: "format_document",
+  lsp_format_range: "format_range",
+  lsp_format_on_type: "format_on_type",
+  lsp_code_actions: "code_actions",
+} as const satisfies Record<EditToolName, string>;
 
 export const editToolDescriptors = {
   lsp_rename: {
@@ -154,7 +163,11 @@ export function createEditToolHandler(options: EditToolHandlerOptions) {
       };
     }
     if (sessions.length === 0) {
-      return { ok: false, results: {}, error: `No matching LSP servers for ${toolName}` };
+      return {
+        ok: false,
+        results: {},
+        error: `No matching LSP servers for ${editPublicToolNames[toolName]}`,
+      };
     }
     if (parsed.apply && sessions.length > 1 && !parsed.serverId) {
       throw new Error("apply: true requires serverId when multiple LSP servers match");
@@ -285,7 +298,10 @@ async function handleCodeActions(
   }
 
   try {
-    assertCommandAllowed(options.config ?? {}, acquired.serverId, command.command);
+    assertCommandAllowed(options.config ?? {}, acquired.serverId, command.command, {
+      resolveServerId: options.sessionManager.resolveServerId?.bind(options.sessionManager),
+      requireResolvedAllowlist: true,
+    });
     const commandResult = await acquired.session.sendRequest(
       "workspace/executeCommand",
       {

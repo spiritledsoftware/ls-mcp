@@ -2,7 +2,7 @@
 title: LSP MCP Server Implementation Details
 summary: Implementation notes for the LSP MCP server covering transport, session management, diagnostics, edits, capabilities, command policy, and result normalization.
 tags: []
-related: []
+related: [facts/project/project_context_snapshot.md, facts/project/context_and_plan_execution_notes.md, facts/project/lsp_mcp_server_knowledge.md, facts/project/verification_and_release_readiness.md]
 keywords: []
 createdAt: '2026-05-24T21:20:18.489Z'
 updatedAt: '2026-05-25T20:31:25.328Z'

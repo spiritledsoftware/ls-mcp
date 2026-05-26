@@ -9,10 +9,7 @@ import { DocumentStore, filePathToUri } from "../../src/lsp/documentStore.js";
 import { LspRequestTimeoutError, type LspRequestOptions } from "../../src/lsp/session.js";
 import { LspSessionManager } from "../../src/lsp/sessionManager.js";
 import type { AcquiredLspSession, ManagedLspSession } from "../../src/lsp/sessionManager.js";
-import {
-  createDiagnosticsToolHandler,
-  lspDiagnosticsTool,
-} from "../../src/tools/diagnosticTools.js";
+import { createDiagnosticsToolHandler, diagnosticsTool } from "../../src/tools/diagnosticTools.js";
 
 interface FakeSession extends ManagedLspSession {
   requests: { method: string; params: unknown }[];
@@ -95,7 +92,7 @@ function createHandler(sessions: AcquiredLspSession[], waitMs = 25) {
   });
 }
 
-describe("lsp_diagnostics", () => {
+describe("diagnostics", () => {
   it("returns cached push diagnostics for push-only servers", async () => {
     const { workspaceRoot, filePath } = await createWorkspaceFile();
     const session = createSession();
@@ -426,9 +423,22 @@ describe("lsp_diagnostics", () => {
     });
   });
 
-  it("exports an importable lsp_diagnostics tool descriptor", () => {
-    expect(lspDiagnosticsTool.name).toBe("lsp_diagnostics");
-    expect(lspDiagnosticsTool.inputSchema.parse({ workspaceRoot: "/workspace" })).toEqual({
+  it("reports the public diagnostics tool name when no servers match", async () => {
+    const { workspaceRoot, filePath } = await createWorkspaceFile();
+    const handler = createHandler([]);
+
+    const result = await handler({ workspaceRoot, filePath });
+
+    expect(result).toEqual({
+      ok: false,
+      results: {},
+      error: "No matching LSP servers for diagnostics",
+    });
+  });
+
+  it("exports an importable diagnostics tool descriptor", () => {
+    expect(diagnosticsTool.name).toBe("diagnostics");
+    expect(diagnosticsTool.inputSchema.parse({ workspaceRoot: "/workspace" })).toEqual({
       workspaceRoot: "/workspace",
     });
   });

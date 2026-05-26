@@ -37,21 +37,41 @@ describe("tool registration", () => {
     const registry = createToolRegistry({ config: {} });
 
     const names = registry.tools.map((tool) => tool.name);
+    const oldNames = [
+      "lsp_list_servers",
+      "lsp_server_status",
+      "lsp_stop_server",
+      "lsp_stop_workspace",
+      "lsp_request",
+      "lsp_notify",
+      "lsp_execute_command",
+      "lsp_diagnostics",
+      "lsp_rename",
+      "lsp_format_document",
+      "lsp_format_range",
+      "lsp_format_on_type",
+      "lsp_code_actions",
+    ];
 
-    expect(names).toContain("lsp_list_servers");
-    expect(names).not.toContain("lsp_servers");
-    expect(names).toContain("lsp_server_status");
-    expect(names).toContain("lsp_stop_server");
-    expect(names).toContain("lsp_stop_workspace");
-    expect(names).toContain("lsp_request");
-    expect(names).toContain("lsp_notify");
-    expect(names).toContain("lsp_execute_command");
-    expect(names).toContain("lsp_diagnostics");
-    expect(names).toContain("lsp_rename");
-    expect(names).toContain("lsp_format_document");
-    expect(names).toContain("lsp_format_range");
-    expect(names).toContain("lsp_format_on_type");
-    expect(names).toContain("lsp_code_actions");
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "list_servers",
+        "server_status",
+        "search_servers",
+        "stop_server",
+        "stop_workspace",
+        "request",
+        "notify",
+        "execute_command",
+        "diagnostics",
+        "rename",
+        "format_document",
+        "format_range",
+        "format_on_type",
+        "code_actions",
+      ]),
+    );
+    expect(names.filter((name) => oldNames.includes(name))).toEqual([]);
     expect(names).toEqual(
       expect.arrayContaining(standardMethodRegistry.map((entry) => entry.toolName)),
     );
@@ -68,10 +88,92 @@ describe("tool registration", () => {
       expect(tool.handler).toEqual(expect.any(Function));
     }
 
-    expect(tools.get("lsp_list_servers")!.inputSchema!.safeParse({}).success).toBe(true);
+    expect(tools.get("list_servers")!.inputSchema!.safeParse({}).success).toBe(true);
     expect(
-      tools.get("lsp_list_servers")!.outputSchema!.safeParse({ ok: true, servers: [] }).success,
+      tools.get("list_servers")!.inputSchema!.safeParse({
+        workspaceRoot: "/repo",
+        filePath: "/repo/a.ts",
+        languageId: "typescript",
+        serverId: "ts",
+      }).success,
     ).toBe(true);
+    expect(
+      tools.get("list_servers")!.outputSchema!.safeParse({ ok: true, servers: [] }).success,
+    ).toBe(true);
+    expect(
+      tools.get("list_servers")!.outputSchema!.safeParse({
+        ok: true,
+        servers: [sampleServerInfo({ id: "typescript-language-server" })],
+      }).success,
+    ).toBe(true);
+    expect(
+      tools.get("list_servers")!.outputSchema!.safeParse({
+        ok: true,
+        servers: [{ id: "typescript-language-server" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      tools.get("list_servers")!.outputSchema!.safeParse({
+        ok: false,
+        error: 'Unknown LSP server "tsserver".',
+        code: "unknown_server",
+        serverId: "tsserver",
+        suggestions: [sampleServerSuggestion({ id: "typescript-language-server" })],
+      }).success,
+    ).toBe(true);
+    expect(
+      tools.get("list_servers")!.outputSchema!.safeParse({
+        ok: false,
+        error: 'Unknown LSP server "tsserver".',
+        code: "unknown_server",
+        serverId: "tsserver",
+        suggestions: [{ id: "typescript-language-server" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      tools.get("search_servers")!.inputSchema!.safeParse({
+        query: "typescript-language-server",
+        workspaceRoot: "/repo",
+        filePath: "/repo/a.ts",
+        languageId: "typescript",
+        limit: 5,
+      }).success,
+    ).toBe(true);
+    expect(
+      tools.get("search_servers")!.outputSchema!.safeParse({
+        ok: true,
+        query: "typescript-language-server",
+        matches: [],
+      }).success,
+    ).toBe(true);
+    expect(
+      tools.get("search_servers")!.outputSchema!.safeParse({
+        ok: true,
+        query: "typescript-language-server",
+        matches: [sampleServerSuggestion({ id: "typescript-language-server" })],
+      }).success,
+    ).toBe(true);
+    expect(
+      tools.get("search_servers")!.outputSchema!.safeParse({
+        ok: true,
+        query: "typescript-language-server",
+        matches: [{ id: "typescript-language-server" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      tools.get("server_status")!.outputSchema!.safeParse({
+        ok: true,
+        servers: [sampleServerInfo({ id: "typescript-language-server" })],
+        sessions: [],
+      }).success,
+    ).toBe(true);
+    expect(
+      tools.get("server_status")!.outputSchema!.safeParse({
+        ok: true,
+        servers: [{ id: "typescript-language-server" }],
+        sessions: [],
+      }).success,
+    ).toBe(false);
     expect(
       tools.get("hover")!.outputSchema!.safeParse({
         ok: true,
@@ -99,7 +201,7 @@ describe("tool registration", () => {
       }).success,
     ).toBe(true);
     expect(
-      tools.get("lsp_diagnostics")!.outputSchema!.safeParse({
+      tools.get("diagnostics")!.outputSchema!.safeParse({
         ok: true,
         results: {
           typescript: {
@@ -119,7 +221,7 @@ describe("tool registration", () => {
       }).success,
     ).toBe(true);
     expect(
-      tools.get("lsp_rename")!.outputSchema!.safeParse({
+      tools.get("rename")!.outputSchema!.safeParse({
         ok: true,
         results: {
           typescript: {
@@ -150,13 +252,13 @@ describe("tool registration", () => {
       }).success,
     ).toBe(true);
     expect(
-      tools.get("lsp_request")!.inputSchema!.safeParse({
+      tools.get("request")!.inputSchema!.safeParse({
         workspaceRoot: "/repo",
         method: "workspace/symbol",
       }).success,
     ).toBe(true);
     expect(
-      tools.get("lsp_rename")!.inputSchema!.parse({
+      tools.get("rename")!.inputSchema!.parse({
         workspaceRoot: "/repo",
         filePath: "/repo/a.ts",
         line: 1,
@@ -182,6 +284,60 @@ describe("tool registration", () => {
     expect(shutdownAll).toHaveBeenCalledTimes(1);
   });
 
+  it("uses public tool names in raw and edit no-server errors", async () => {
+    const workspaceRoot = await makeTempDir("lsp-mcp-tool-no-server-err-");
+    const filePath = join(workspaceRoot, "a.ts");
+    await writeText(filePath, "const value = 1;\n");
+    const sessionManager = {
+      shutdownAll: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+      getSessionsForFile: vi.fn(async () => []),
+      getSessionsForWorkspace: vi.fn(async () => []),
+      getSessionsForFileSettled: vi.fn(async () => []),
+      getSessionsForWorkspaceSettled: vi.fn(async () => []),
+    } as unknown as LspSessionManager;
+    const registry = createToolRegistry({ config: {}, sessionManager });
+    const tools = new Map(registry.tools.map((tool) => [tool.name, tool]));
+
+    const rawCases = [
+      ["request", { workspaceRoot: "/repo", method: "workspace/symbol" }],
+      ["notify", { workspaceRoot: "/repo", method: "workspace/didChangeConfiguration" }],
+      ["execute_command", { workspaceRoot: "/repo", command: "source.fixAll" }],
+    ] as const;
+    const editCases = [
+      ["rename", { workspaceRoot, filePath, line: 1, character: 1, newName: "next" }],
+      ["format_document", { workspaceRoot, filePath }],
+      [
+        "format_range",
+        {
+          workspaceRoot,
+          filePath,
+          startLine: 1,
+          startCharacter: 1,
+          endLine: 1,
+          endCharacter: 2,
+        },
+      ],
+      ["format_on_type", { workspaceRoot, filePath, line: 1, character: 1, ch: ";" }],
+      [
+        "code_actions",
+        {
+          workspaceRoot,
+          filePath,
+          startLine: 1,
+          startCharacter: 1,
+          endLine: 1,
+          endCharacter: 2,
+        },
+      ],
+    ] as const;
+
+    for (const [name, input] of [...rawCases, ...editCases]) {
+      const result = (await tools.get(name)!.handler(input)) as { error?: string };
+
+      expect(result.error).toBe(`No matching LSP servers for ${name}`);
+    }
+  });
+
   it("uses project config for workspace-scoped tools in the default configured registry", async () => {
     const configHome = await makeTempDir("lsp-mcp-tool-config-home-");
     const workspaceRoot = await makeTempDir("lsp-mcp-tool-workspace-");
@@ -205,10 +361,24 @@ describe("tool registration", () => {
     );
 
     const registry = await createConfiguredToolRegistry();
-    const statusTool = registry.tools.find((tool) => tool.name === "lsp_server_status")!;
+    const listTool = registry.tools.find((tool) => tool.name === "list_servers")!;
+    const statusTool = registry.tools.find((tool) => tool.name === "server_status")!;
 
+    const listed = await listTool.handler({ workspaceRoot, serverId: "projectCustom" });
     const result = await statusTool.handler({ workspaceRoot, serverId: "projectCustom" });
 
+    expect(listed).toMatchObject({
+      ok: true,
+      servers: [
+        {
+          id: "projectCustom",
+          kind: "custom",
+          command: process.execPath,
+          languageIds: ["customlang"],
+          extensions: [".custom"],
+        },
+      ],
+    });
     expect(result).toMatchObject({
       ok: true,
       servers: [
@@ -223,7 +393,7 @@ describe("tool registration", () => {
     });
     await expect(
       statusTool.handler({ workspaceRoot: unrelatedWorkspaceRoot, serverId: "projectCustom" }),
-    ).rejects.toThrow("Unknown LSP server projectCustom");
+    ).rejects.toThrow('Unknown LSP server "projectCustom".');
 
     await registry.shutdown();
   });
@@ -270,6 +440,56 @@ describe("tool registration", () => {
     });
   });
 });
+
+function sampleServerInfo(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: "typescript-language-server",
+    registryId: "typescript-language-server",
+    configuredId: "typescript",
+    kind: "managed",
+    profile: "managed",
+    command: "typescript-language-server",
+    configuredCommand: false,
+    args: ["--stdio"],
+    languageIds: ["typescript", "javascript"],
+    extensions: [".ts", ".js"],
+    aliases: ["typescript", "ts_ls"],
+    aliasDetails: [
+      { value: "typescript", kind: "language-id" },
+      { value: "ts_ls", kind: "lspconfig" },
+    ],
+    upstream: {
+      mason: "typescript-language-server",
+      lspconfig: "ts_ls",
+    },
+    install: {
+      status: "ready",
+      command: "typescript-language-server",
+      args: ["--stdio"],
+      source: "system",
+    },
+    running: false,
+    ...overrides,
+  };
+}
+
+function sampleServerSuggestion(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: "typescript-language-server",
+    score: 100,
+    reasons: ["exact canonical id"],
+    aliases: ["typescript", "ts_ls"],
+    aliasDetails: [
+      { value: "typescript", kind: "language-id" },
+      { value: "ts_ls", kind: "lspconfig" },
+    ],
+    registryId: "typescript-language-server",
+    configuredId: "typescript",
+    languageIds: ["typescript", "javascript"],
+    extensions: [".ts", ".js"],
+    ...overrides,
+  };
+}
 
 async function writeProjectConfig(
   workspaceRoot: string,
